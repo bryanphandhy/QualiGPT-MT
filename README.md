@@ -11,7 +11,8 @@ This is a complete web-based reimplementation of the original QualiGPT desktop a
 - **Enhanced AI**: Uses GPT-4o with 128k context window for better analysis
 - **Cross-Platform**: Works on Mac, Windows, Linux, tablets
 - **Easy Deployment**: Run locally or deploy to cloud platforms
-- **Docker Support**: Containerized deployment for production use
+- **Docker Support**: Complete containerization with production-ready Gunicorn deployment
+- **Clean Output**: Enhanced GPT-4o prompts for structured results without extra commentary
 
 ## Features
 
