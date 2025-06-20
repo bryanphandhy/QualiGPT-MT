@@ -247,9 +247,8 @@ temp/
 *~
 
 # QualiGPT specific ignores
-# NLTK data is downloaded at runtime, but you might want to cache it
-# Uncomment the next line if you want to ignore the downloaded NLTK data
-# nltk_data/
+# NLTK data is downloaded at runtime and during Docker build
+nltk_data/
 
 # Uploaded files during development/testing
 uploads/
