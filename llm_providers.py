@@ -77,8 +77,11 @@ class OpenAIProvider(BaseProvider):
         max_tokens: int = 4000,
         temperature: float = 0.7,
     ) -> str:
+        # Use provided model or default
+        model_to_use = model if model != "auto" else "gpt-4o"
+        
         resp = self._client.chat.completions.create(
-            model=model,
+            model=model_to_use,
             messages=[
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": user_message},
@@ -111,18 +114,20 @@ class AnthropicProvider(BaseProvider):
         system_message: str,
         user_message: str,
         *,
-        model: str = "claude-3-haiku-20240307",
+        model: str = "claude-3-5-sonnet-20241022",
         max_tokens: int = 4000,
         temperature: float = 0.7,
     ) -> str:
         import anthropic  # type: ignore
 
+        # Use provided model or default
+        model_to_use = model if model != "auto" else "claude-3-5-sonnet-20241022"
+        
         msgs = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": user_message},
+            {"role": "user", "content": f"System: {system_message}\n\nUser: {user_message}"},
         ]
         resp = self._client.messages.create(
-            model=model,
+            model=model_to_use,
             messages=msgs,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -131,7 +136,7 @@ class AnthropicProvider(BaseProvider):
         return "".join(block.text for block in resp.content if hasattr(block, "text"))
 
 # -----------------------------------------------------------------------------
-# Google / Gemini-Pro
+# Google / Gemini 2.5 Flash
 # -----------------------------------------------------------------------------
 
 class GeminiProvider(BaseProvider):
@@ -143,7 +148,7 @@ class GeminiProvider(BaseProvider):
         self._genai = genai
 
     def test_connection(self) -> None:
-        model = self._genai.GenerativeModel("gemini-pro")
+        model = self._genai.GenerativeModel("gemini-2.5-flash")
         _ = model.generate_content("ping", generation_config={"max_output_tokens": 1})
 
     def chat(
@@ -151,11 +156,14 @@ class GeminiProvider(BaseProvider):
         system_message: str,
         user_message: str,
         *,
-        model: str = "gemini-pro",
-        max_tokens: int = 2048,
+        model: str = "gemini-2.5-flash",
+        max_tokens: int = 4000,
         temperature: float = 0.7,
     ) -> str:
-        gen_model = self._genai.GenerativeModel(model)
+        # Use provided model or default
+        model_to_use = model if model != "auto" else "gemini-2.5-flash"
+        
+        gen_model = self._genai.GenerativeModel(model_to_use)
         prompt = f"{system_message}\n\n{user_message}"
         resp = gen_model.generate_content(prompt, generation_config={
             "temperature": temperature,

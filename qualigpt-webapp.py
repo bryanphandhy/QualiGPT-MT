@@ -102,17 +102,28 @@ def test_api():
         data = request.json
         api_key = data.get('api_key')
         provider_name = data.get('provider', 'openai')
+        model_name = data.get('model')  # Get the specific model
         
         if not api_key:
             return jsonify({'success': False, 'error': 'API key is required'})
         
         try:
             provider = get_provider(provider_name, api_key)
-            provider.test_connection()
+            
+            # For Gemini, we can test with a specific model
+            if provider_name == 'gemini' and model_name:
+                import google.generativeai as genai
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(model_name)
+                _ = model.generate_content("ping", generation_config={"max_output_tokens": 1})
+            else:
+                # For other providers, use default test_connection
+                provider.test_connection()
+                
         except Exception as e:
             return jsonify({'success': False, 'error': f'Connection failed: {e}'})
         
-        return jsonify({'success': True, 'message': 'API key is valid'})
+        return jsonify({'success': True, 'message': f'Successfully connected to {model_name or provider_name}'})
     
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
@@ -166,16 +177,19 @@ def analyze():
         data = request.json
         api_key = data.get('api_key')
         provider_name = data.get('provider', 'openai')
+        model_name = data.get('model')  # Get the specific model
         data_content = data.get('data_content')
         data_type = data.get('data_type')
         num_themes = data.get('num_themes', 10)
         custom_prompt = data.get('custom_prompt', '')
         enable_role_playing = data.get('enable_role_playing', False)
+        temperature = data.get('temperature', 0.7)  # Get temperature setting
+        max_tokens = data.get('max_tokens', 4000)   # Get max tokens setting
         
         if not api_key or not data_content:
             return jsonify({'success': False, 'error': 'API key and data content are required'})
         
-        # Create OpenAI client with API key
+        # Create provider with API key
         provider = get_provider(provider_name, api_key)
         
         # Get the appropriate prompt
@@ -197,21 +211,28 @@ def analyze():
         for i, segment in enumerate(segments):
             combined_message = segment + "\n\n" + prompt
             
-            # Message list retained for potential debugging/compat; provider.chat consumes
-            # the system and user strings directly, so we don't need the OpenAI-style list.
-            
+            # Use the selected model and settings
             response_text = provider.chat(
                 system_message,
                 combined_message,
-                temperature=0.7,
-                max_tokens=4000,
+                model=model_name or "auto",  # Use selected model or default
+                temperature=temperature,
+                max_tokens=max_tokens,
             )
             all_responses.append(response_text)
         
         # If multiple segments, merge and re-analyze
         if len(segments) > 1:
             merged_responses = "\n".join(all_responses)
-            final_response = analyze_merged_responses(merged_responses, num_themes, system_message, provider)
+            final_response = analyze_merged_responses(
+                merged_responses, 
+                num_themes, 
+                system_message, 
+                provider,
+                model_name,
+                temperature,
+                max_tokens
+            )
         else:
             final_response = all_responses[0]
         
@@ -258,7 +279,7 @@ def split_into_segments(text, max_tokens=120000):
     
     return segments
 
-def analyze_merged_responses(merged_responses, num_themes, system_message, provider):
+def analyze_merged_responses(merged_responses, num_themes, system_message, provider, model_name, temperature, max_tokens):
     """Analyze merged responses to create a final summary"""
     prompt = f"""This is the result of a thematic analysis of several parts of the dataset. Now, summarize the same themes to generate a new table.
 Please identify the {num_themes} most common key themes from the interview and organize the results in a structured table format.
@@ -283,8 +304,9 @@ Analyze the following merged responses: {merged_responses}"""
     response_text = provider.chat(
         system_message,
         prompt,
-        max_tokens=4000,
-        temperature=0.7,
+        model=model_name or "auto",  # Use selected model or default
+        temperature=temperature,
+        max_tokens=max_tokens,
     )
     
     return response_text
