@@ -2,6 +2,8 @@
 
 A modern web-based version of QualiGPT - an AI-powered qualitative data analysis tool that uses OpenAI's GPT-4o to perform thematic analysis on interview data, focus groups, and social media posts.
 
+> **Looking for in-depth architecture & developer docs?  See [`docs/DETAILED_DOCUMENTATION.md`](docs/DETAILED_DOCUMENTATION.md).**
+
 ## 🆕 What's New in the Web Version
 
 This is a complete web-based reimplementation of the original QualiGPT desktop application, offering:
