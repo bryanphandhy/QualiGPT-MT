@@ -8,6 +8,9 @@
     <!-- Chart.js for visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
+    <!-- Font Awesome for better icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
         :root {
             /* Light mode variables */
@@ -50,7 +53,7 @@
             padding: 0;
             box-sizing: border-box;
         }
-
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
@@ -58,7 +61,7 @@
             background-color: var(--bg-primary);
             transition: background-color 0.3s ease, color 0.3s ease;
         }
-
+        
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -134,16 +137,28 @@
             transform: translateY(-2px);
             box-shadow: var(--shadow-hover);
         }
-
+        
         .section {
             background: var(--bg-secondary);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 30px;
             margin-bottom: 30px;
             box-shadow: var(--shadow);
             border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
         }
 
+        .section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
+        }
+        
         .section h2 {
             font-size: 1.5rem;
             font-weight: 600;
@@ -153,7 +168,7 @@
             align-items: center;
             gap: 10px;
         }
-
+        
         .step-number {
             background: var(--accent-color);
             color: white;
@@ -287,12 +302,26 @@
         }
 
         .alert {
-            padding: 15px 20px;
-            border-radius: 8px;
+            padding: 16px 20px;
+            border-radius: 12px;
             margin-bottom: 20px;
             font-weight: 500;
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
         }
-
+        
+        .alert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: currentColor;
+            opacity: 0.3;
+        }
+        
         .alert-success {
             background: var(--success-color);
             color: white;
@@ -355,13 +384,13 @@
             white-space: pre-wrap;
             color: var(--text-primary);
         }
-
+        
         .radio-group {
             display: flex;
             gap: 20px;
             margin-bottom: 20px;
         }
-
+        
         .radio-option {
             display: flex;
             align-items: center;
@@ -369,13 +398,38 @@
             cursor: pointer;
         }
 
+        .radio-option {
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 12px 16px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .radio-option:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
         .radio-option input[type="radio"] {
             accent-color: var(--accent-color);
+            margin-right: 8px;
+        }
+
+        .radio-option input[type="radio"]:checked + label {
+            color: var(--accent-color);
+            font-weight: 600;
         }
 
         .radio-option label {
             color: var(--text-primary);
             font-weight: 500;
+            cursor: pointer;
+            margin: 0;
         }
 
         .form-group {
@@ -401,6 +455,27 @@
             color: var(--text-primary);
             transition: all 0.3s ease;
             box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
+            transform: translateY(-1px);
+        }
+
+        .form-group input[type="range"] {
+            padding: 8px 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .form-group input[type="range"]:focus {
+            transform: none;
+            box-shadow: none;
         }
 
         .form-group input:focus,
@@ -415,21 +490,42 @@
         .checkbox-group {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 20px;
+            background: var(--bg-primary);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .checkbox-group:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-hover);
         }
 
         .checkbox-group input[type="checkbox"] {
             accent-color: var(--accent-color);
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group input[type="checkbox"]:checked + label {
+            color: var(--accent-color);
+            font-weight: 600;
         }
 
         .checkbox-group label {
             color: var(--text-primary);
             font-weight: 500;
+            cursor: pointer;
+            margin: 0;
+            flex: 1;
         }
-
+        
         .results-area {
             background: var(--bg-primary);
             border: 1px solid var(--border-color);
@@ -445,146 +541,707 @@
 
         .results-table-container {
             background: var(--bg-primary);
-            border-radius: 12px;
-            box-shadow: var(--shadow);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             overflow: hidden;
-            margin-top: 20px;
+            margin-top: 30px;
+            position: relative;
+            border: 1px solid var(--border-color);
+        }
+
+        .results-table-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-hover), var(--success-color));
         }
 
         .table-controls {
-            background: var(--bg-secondary);
-            padding: 20px;
-            border-bottom: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 25px 30px;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+            border-bottom: 2px solid var(--border-color);
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 20px;
+        }
+
+        .search-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 16px;
+            opacity: 0.7;
+            pointer-events: none;
+            z-index: 1;
         }
 
         .search-box {
-            padding: 10px 15px;
+            padding: 15px 20px;
+            padding-left: 50px;
             border: 2px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 15px;
             font-size: 14px;
             background: var(--bg-primary);
             color: var(--text-primary);
-            min-width: 300px;
+            min-width: 320px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .search-box:focus {
             outline: none;
             border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(var(--accent-color-rgb), 0.15);
+            transform: translateY(-2px);
+        }
+
+        .search-box:focus + .search-icon,
+        .search-container:hover .search-icon {
+            color: var(--accent-color);
+            opacity: 1;
+        }
+
+        .search-box::placeholder {
+            color: var(--text-secondary);
         }
 
         .raw-toggle {
-            background: var(--bg-tertiary);
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--border-color));
             color: var(--text-primary);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 6px;
+            border: 2px solid var(--border-color);
+            padding: 15px 20px;
+            border-radius: 15px;
             cursor: pointer;
             font-size: 14px;
+            font-weight: 600;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .raw-toggle:hover {
-            background: var(--border-color);
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(var(--accent-color-rgb), 0.3);
         }
 
         .table-info {
             color: var(--text-secondary);
             font-size: 14px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 2px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
+        .table-info::before {
+            content: '📊';
+            font-size: 16px;
+        }
+
+        /* Enhanced Results Table Styling */
         .results-table {
             width: 100%;
             border-collapse: collapse;
+            background: var(--bg-primary);
             font-size: 14px;
+            line-height: 1.5;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .results-table thead {
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+            border-bottom: 2px solid var(--border-color);
         }
 
         .results-table th {
-            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-            color: white;
-            padding: 15px 12px;
+            padding: 20px;
             text-align: left;
-            font-weight: 600;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            position: relative;
             cursor: pointer;
-            transition: background 0.3s ease;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            transition: all 0.3s ease;
+            border-right: 1px solid var(--border-color);
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+        }
+
+        .results-table th:last-child {
+            border-right: none;
         }
 
         .results-table th:hover {
-            background: linear-gradient(135deg, var(--accent-hover), var(--accent-color));
+            background: linear-gradient(135deg, var(--bg-tertiary), var(--accent-color));
+            color: white;
+            transform: translateY(-2px);
         }
 
         .results-table th.sortable::after {
-            content: ' ↕';
-            opacity: 0.7;
+            content: '⇅';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 14px;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+
+        .results-table th.sortable:hover::after {
+            opacity: 1;
+            color: white;
         }
 
         .results-table th.sort-asc::after {
-            content: ' ↑';
+            content: '▲';
             opacity: 1;
+            color: var(--accent-color);
         }
 
         .results-table th.sort-desc::after {
-            content: ' ↓';
+            content: '▼';
             opacity: 1;
+            color: var(--accent-color);
+        }
+
+        .results-table tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            position: relative;
+            animation: fadeInUp 0.5s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .results-table tbody tr:nth-child(even) {
+            background: rgba(var(--accent-color-rgb), 0.02);
+        }
+
+        .results-table tbody tr:hover {
+            background: linear-gradient(135deg, var(--bg-secondary), rgba(var(--accent-color-rgb), 0.1));
+            transform: translateX(8px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .results-table tbody tr:last-child {
+            border-bottom: none;
         }
 
         .results-table td {
-            padding: 12px;
-            border-bottom: 1px solid var(--border-color);
+            padding: 20px;
+            vertical-align: top;
+            border-right: 1px solid var(--border-color);
             color: var(--text-primary);
+            transition: all 0.3s ease;
         }
 
-        .results-table tr:hover {
-            background: var(--bg-secondary);
+        .results-table td:last-child {
+            border-right: none;
         }
 
+        /* Enhanced cell styling with icons and badges */
         .theme-cell {
-            font-weight: 600;
+            font-weight: 700;
+            color: var(--accent-color);
+            font-size: 16px;
+            min-width: 180px;
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .theme-cell::before {
+            content: '\f02b';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
+            opacity: 0.8;
             color: var(--accent-color);
         }
 
         .description-cell {
-            line-height: 1.5;
+            color: var(--text-primary);
+            line-height: 1.7;
+            max-width: 350px;
+            position: relative;
+            padding-left: 50px;
+        }
+
+        .description-cell::before {
+            content: '\f044';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            font-size: 16px;
+            opacity: 0.7;
+            color: var(--text-secondary);
         }
 
         .quotes-cell {
-            font-style: italic;
             color: var(--text-secondary);
-            border-left: 3px solid var(--accent-color);
-            padding-left: 10px;
+            font-style: italic;
+            line-height: 1.7;
+            max-width: 400px;
+            background: linear-gradient(135deg, var(--bg-secondary), rgba(var(--accent-color-rgb), 0.05));
+            padding: 16px 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent-color);
+            margin: 4px 0;
+            position: relative;
+            padding-left: 50px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .quotes-cell::before {
+            content: '\f10d';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 20px;
+            top: 16px;
+            font-size: 16px;
+            opacity: 0.8;
+            color: var(--accent-color);
+        }
+
+        .quotes-cell::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-color), transparent);
         }
 
         .participant-count {
-            background: linear-gradient(135deg, var(--success-color), #20c997);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
             color: white;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 25px;
+            font-weight: 700;
+            font-size: 13px;
             text-align: center;
-            min-width: 30px;
+            min-width: 60px;
+            box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
+            transition: all 0.3s ease;
         }
 
+        .participant-count::before {
+            content: '\f0c0';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            font-size: 14px;
+        }
+
+        .participant-count:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(var(--accent-color-rgb), 0.4);
+        }
+
+        /* Enhanced export buttons */
         .export-buttons {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 15px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
 
+        .export-btn {
+            background: linear-gradient(135deg, var(--success-color), #20c997);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.2);
+            text-decoration: none;
+            min-width: 140px;
+            justify-content: center;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+        }
+
+        .export-btn.secondary {
+            background: linear-gradient(135deg, var(--warning-color), #fd7e14);
+            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
+        }
+
+        .export-btn.secondary:hover {
+            box-shadow: 0 8px 25px rgba(255, 193, 7, 0.4);
+        }
+
+        .export-btn.print {
+            background: linear-gradient(135deg, var(--text-secondary), #6c757d);
+            box-shadow: 0 4px 15px rgba(108, 117, 125, 0.2);
+        }
+
+        .export-btn.print:hover {
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.4);
+        }
+
+        /* Enhanced row animations */
+        .results-table tbody tr:nth-child(1) { animation-delay: 0.1s; }
+        .results-table tbody tr:nth-child(2) { animation-delay: 0.2s; }
+        .results-table tbody tr:nth-child(3) { animation-delay: 0.3s; }
+        .results-table tbody tr:nth-child(4) { animation-delay: 0.4s; }
+        .results-table tbody tr:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Enhanced Raw view styling */
+        .raw-view {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            margin-top: 25px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            color: var(--text-primary);
+            max-height: 600px;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .raw-view::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
+        }
+
+        /* Row Details Modal */
+        .row-details-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .row-details-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-primary);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            border-bottom: 2px solid var(--border-color);
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: var(--error-color);
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: #c82333;
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .detail-section {
+            margin-bottom: 30px;
+        }
+
+        .detail-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-section h4 {
+            color: var(--accent-color);
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .detail-section p {
+            color: var(--text-primary);
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        .quotes-detail {
+            background: linear-gradient(135deg, var(--bg-secondary), rgba(var(--accent-color-rgb), 0.05));
+            padding: 20px;
+            border-radius: 12px;
+            border-left: 4px solid var(--accent-color);
+            font-style: italic;
+            color: var(--text-secondary);
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        .participant-detail {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .participant-count.large {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            color: white;
+            padding: 15px 20px;
+            border-radius: 50%;
+            min-width: 60px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 20px rgba(var(--accent-color-rgb), 0.3);
+        }
+
+        .participant-detail span:last-child {
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Enhanced Results Header */
+        .results-header {
+            margin-bottom: 30px;
+        }
+
+        .results-header h2 {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            color: var(--text-primary);
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .results-header h2 i {
+            color: var(--accent-color);
+            font-size: 1.5rem;
+        }
+
+        .results-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, var(--bg-primary), var(--bg-secondary));
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+            border-color: var(--accent-color);
+        }
+
+        .summary-card i {
+            font-size: 2rem;
+            color: var(--accent-color);
+            background: rgba(var(--accent-color-rgb), 0.1);
+            padding: 15px;
+            border-radius: 50%;
+            min-width: 60px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .summary-card div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .summary-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--accent-color);
+            line-height: 1;
+        }
+
+        .summary-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Enhanced table interactions */
+        .results-table tbody tr {
+            cursor: pointer;
+        }
+
+        .results-table tbody tr:hover {
+            background: linear-gradient(135deg, var(--bg-secondary), rgba(var(--accent-color-rgb), 0.1));
+            transform: translateX(8px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .results-table tbody tr:hover::after {
+            content: '👆 Click to view details';
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: var(--accent-color);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.95;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateY(-50%) scale(1); }
+            50% { transform: translateY(-50%) scale(1.05); }
+        }
+
+        /* Enhanced loading states */
         .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
             display: none;
             justify-content: center;
             align-items: center;
@@ -593,29 +1250,32 @@
 
         .loading-spinner {
             background: var(--bg-primary);
-            padding: 40px;
-            border-radius: 12px;
+            padding: 40px 50px;
+            border-radius: 16px;
             text-align: center;
-            box-shadow: var(--shadow-hover);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+            max-width: 400px;
+            width: 90%;
         }
-
+        
         .spinner {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border: 4px solid var(--border-color);
             border-top: 4px solid var(--accent-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
+            margin: 0 auto 25px;
         }
-
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
+        
         .progress-bar {
-            width: 300px;
+            width: 100%;
             height: 8px;
             background: var(--border-color);
             border-radius: 4px;
@@ -628,32 +1288,48 @@
             background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
             width: 0%;
             transition: width 0.3s ease;
+            border-radius: 4px;
         }
 
+        /* Enhanced charts styling */
         .charts-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-top: 20px;
+            gap: 25px;
+            margin-top: 25px;
         }
 
         .chart-card {
             background: var(--bg-primary);
-            border-radius: 12px;
-            padding: 20px;
+            border-radius: 16px;
+            padding: 25px;
             box-shadow: var(--shadow);
             border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
         }
 
         .chart-title {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             font-weight: 600;
             color: var(--text-primary);
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             text-align: center;
+            position: relative;
         }
 
-        @media (max-width: 768px) {
+        /* Enhanced responsive design */
+        @media (max-width: 1024px) {
             .charts-container {
                 grid-template-columns: 1fr;
             }
@@ -661,10 +1337,99 @@
             .table-controls {
                 flex-direction: column;
                 align-items: stretch;
+                gap: 15px;
             }
             
             .search-box {
                 min-width: auto;
+                width: 100%;
+            }
+            
+            .results-table {
+                font-size: 13px;
+            }
+            
+            .results-table th,
+            .results-table td {
+                padding: 12px 15px;
+            }
+            
+            .description-cell,
+            .quotes-cell {
+                max-width: 250px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+            padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .section {
+                padding: 20px;
+            }
+            
+            .results-table {
+                font-size: 12px;
+            }
+            
+            .results-table th,
+            .results-table td {
+                padding: 10px 12px;
+            }
+            
+            .theme-cell {
+            min-width: 120px;
+            }
+            
+            .description-cell,
+            .quotes-cell {
+                max-width: 200px;
+        }
+        
+        .export-buttons {
+                flex-direction: column;
+            }
+            
+            .export-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .header p {
+                font-size: 1rem;
+            }
+            
+            .upload-area {
+                padding: 30px 20px;
+            }
+            
+            .results-table {
+                font-size: 11px;
+            }
+            
+            .results-table th,
+            .results-table td {
+                padding: 8px 10px;
+            }
+            
+            .theme-cell {
+                min-width: 100px;
+            }
+            
+            .description-cell,
+            .quotes-cell {
+                max-width: 150px;
             }
         }
     </style>
@@ -690,10 +1455,10 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <h1>QualiGPT</h1>
+        <h1>QualiGPT</h1>
             <p>AI-Powered Qualitative Data Analysis Tool</p>
         </div>
-
+        
         <div id="alert" class="alert"></div>
         
         <!-- Step 1: API Connection -->
@@ -728,9 +1493,9 @@
                         <input type="number" id="maxTokens" min="1000" max="8000" value="4000" step="500">
                         <small style="color: var(--text-secondary);">Maximum length of the analysis response</small>
                     </div>
-                </div>
             </div>
-            
+        </div>
+        
             <div style="display: flex; gap: 10px; align-items: center;">
                 <input type="password" id="apiKey" placeholder="Enter your API key" style="flex: 1; padding: 12px 16px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 16px; background: var(--bg-primary); color: var(--text-primary);">
                 <button class="btn" onclick="testAPI()" id="testBtn">🔗 Connect</button>
@@ -753,20 +1518,20 @@
         <!-- Step 3: Analysis Configuration -->
         <div class="section">
             <h2><span class="step-number">3</span> Analysis Configuration</h2>
-            <div class="radio-group">
+                <div class="radio-group">
                 <div class="radio-option">
                     <input type="radio" id="interview" name="dataType" value="Interview" checked>
                     <label for="interview">Interview</label>
-                </div>
+                    </div>
                 <div class="radio-option">
                     <input type="radio" id="focusGroup" name="dataType" value="Focus Group">
                     <label for="focusGroup">Focus Group</label>
-                </div>
+                    </div>
                 <div class="radio-option">
                     <input type="radio" id="socialMedia" name="dataType" value="Social Media Posts">
                     <label for="socialMedia">Social Media Posts</label>
+                    </div>
                 </div>
-            </div>
             
             <div class="form-group">
                 <label for="numThemes">Number of Themes (1-20):</label>
@@ -781,14 +1546,39 @@
             <div class="form-group">
                 <label for="customPrompt">Custom Prompt (Optional):</label>
                 <textarea id="customPrompt" rows="3" placeholder="Add specific instructions for your analysis..."></textarea>
-            </div>
-            
+        </div>
+        
             <button class="btn" onclick="runAnalysis()" id="analyzeBtn" disabled>🔍 Analyze Data</button>
         </div>
-
+        
         <!-- Results -->
         <div class="section" id="resultsSection" style="display: none;">
-            <h2>Analysis Results</h2>
+            <div class="results-header">
+                <h2><i class="fas fa-chart-line"></i> Analysis Results</h2>
+                <div class="results-summary" id="resultsSummary">
+                    <div class="summary-card">
+                        <i class="fas fa-tags"></i>
+                    <div>
+                            <span class="summary-number" id="totalThemes">0</span>
+                            <span class="summary-label">Themes</span>
+                    </div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fas fa-users"></i>
+                    <div>
+                            <span class="summary-number" id="totalParticipants">0</span>
+                            <span class="summary-label">Participants</span>
+                    </div>
+                    </div>
+                    <div class="summary-card">
+                        <i class="fas fa-quote-left"></i>
+                    <div>
+                            <span class="summary-number" id="totalQuotes">0</span>
+                            <span class="summary-label">Quotes</span>
+                    </div>
+                </div>
+            </div>
+            </div>
             
             <!-- Charts Section -->
             <div id="chartsSection" style="display: none;">
@@ -801,15 +1591,20 @@
                         <div class="chart-title">Participant Count by Theme</div>
                         <canvas id="participantChart"></canvas>
                     </div>
-                </div>
             </div>
-            
+        </div>
+        
             <!-- Table View -->
             <div id="tableView" class="results-table-container">
                 <div class="table-controls">
                     <div style="display: flex; align-items: center; gap: 15px;">
-                        <input type="text" id="searchBox" class="search-box" placeholder="🔍 Search themes, descriptions, or quotes..." oninput="filterTable()">
-                        <button class="raw-toggle" onclick="toggleView()" id="viewToggle">📄 Show Raw Text</button>
+                        <div class="search-container">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="searchBox" class="search-box" placeholder="Search themes, descriptions, or quotes..." oninput="filterTable()">
+                        </div>
+                        <button class="raw-toggle" onclick="toggleView()" id="viewToggle">
+                            <i class="fas fa-file-alt"></i> Show Raw Text
+            </button>
                     </div>
                     <div class="table-info">
                         <span id="tableInfo">Found 0 themes</span>
@@ -828,17 +1623,23 @@
                         <tbody id="resultsTableBody">
                         </tbody>
                     </table>
-                </div>
             </div>
-            
+        </div>
+        
             <!-- Raw View -->
-            <div id="rawView" class="results-area" style="display: none;"></div>
+            <div id="rawView" class="raw-view" style="display: none;"></div>
             
             <!-- Export Buttons -->
             <div class="export-buttons">
-                <button class="btn" onclick="exportCSV()">📊 Export CSV</button>
-                <button class="btn btn-secondary" onclick="saveAsText()">📄 Save as Text</button>
-                <button class="btn btn-secondary" onclick="printTable()">🖨️ Print Table</button>
+                <button class="export-btn" onclick="exportCSV()">
+                    <i class="fas fa-file-csv"></i> Export CSV
+                </button>
+                <button class="export-btn secondary" onclick="saveAsText()">
+                    <i class="fas fa-file-alt"></i> Save as Text
+                </button>
+                <button class="export-btn print" onclick="printTable()">
+                    <i class="fas fa-print"></i> Print Table
+                </button>
             </div>
         </div>
     </div>
@@ -1153,6 +1954,10 @@
                     document.getElementById('analyzeBtn').disabled = false;
                     showAlert(`File "${file.name}" uploaded successfully!`, 'success');
                     saveSession();
+                    // Restore upload area after successful upload
+                    uploadArea.innerHTML = originalContent;
+                    uploadArea.style.cursor = 'pointer';
+                    uploadArea.classList.remove('uploading');
                 } else {
                     showAlert(`Upload failed: ${data.error}`, 'error');
                     // Restore original upload area
@@ -1244,7 +2049,7 @@
                 document.getElementById('testBtn').textContent = '🔗 Connect';
             }
         }
-
+        
         async function runAnalysis() {
             if (!apiConnected) {
                 showAlert('Please connect to your API first', 'error');
@@ -1301,7 +2106,6 @@
                 
                 if (data.success) {
                     analysisResponse = data.response;
-                    document.getElementById('results').textContent = data.response;
                     document.getElementById('resultsSection').style.display = 'block';
                     showAlert('Analysis completed successfully', 'success');
                     document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
@@ -1319,64 +2123,111 @@
             }
         }
 
-        function parseAndDisplayResults(responseText) {
-            // Parse the response text to extract table data
-            const parsedTableData = parseResponseToTable(responseText);
-            
-            if (parsedTableData && parsedTableData.length > 0) {
-                tableData = parsedTableData; // Store globally for export
-                displayResultsTable(parsedTableData);
-                
-                // Create charts
-                createCharts(parsedTableData);
-                
-                // Show table view by default
-                document.getElementById('tableView').style.display = 'block';
-                document.getElementById('rawView').style.display = 'none';
-                document.getElementById('viewToggle').textContent = '📄 Show Raw Text';
-            } else {
-                // Fallback to raw text display
-                document.getElementById('rawView').textContent = responseText;
-                document.getElementById('tableView').style.display = 'none';
-                document.getElementById('rawView').style.display = 'block';
-                document.getElementById('viewToggle').textContent = '📊 Show Table';
+        function parseResponseToTable(responseText) {
+            try {
+                const lines = responseText.split(/\r?\n/).map(l => l.trim());
+
+                // Find the first table row that begins with a pipe
+                const startIdx = lines.findIndex(l => l.startsWith('|'));
+                if (startIdx === -1) return null;
+
+                // Collect contiguous lines that begin with a pipe
+                const tableLines = [];
+                for (let i = startIdx; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (!line.startsWith('|')) break;
+                    tableLines.push(line);
+                }
+
+                if (tableLines.length < 2) return null; // Need header + at least one data row
+
+                // Remove header row
+                tableLines.shift();
+
+                const tableData = [];
+                tableLines.forEach(rawLine => {
+                    // Remove trailing markdown row separator if present
+                    rawLine = rawLine.replace(/\|\s*-{3,}\s*$/, '').trim();
+
+                    // Split into cells
+                    let cells = rawLine.split('|');
+                    // Remove first empty element if the line starts with a pipe
+                    if (cells[0].trim() === '') cells.shift();
+                    // Remove last empty element if the line ends with a pipe
+                    if (cells[cells.length - 1].trim() === '') cells.pop();
+
+                    if (cells.length < 4) return; // Skip incomplete rows
+
+                    // Clean each cell
+                    cells = cells.map(c => c.replace(/^['"`\s]+|['"`\s]+$/g, ''));
+
+                    const [theme, description, quotes, participantCount] = cells;
+                    tableData.push({ theme, description, quotes, participantCount });
+                });
+
+                return tableData.length ? tableData : null;
+            } catch (err) {
+                console.error('Robust table parse error:', err);
+                return null;
             }
         }
 
-        function parseResponseToTable(responseText) {
-            try {
-                // Look for the table pattern with asterisks
-                const tableMatch = responseText.match(/\*{10,}([\s\S]*?)\*{10,}/);
-                if (!tableMatch) return null;
-                
-                const tableContent = tableMatch[1].trim();
-                const lines = tableContent.split('\n').filter(line => line.trim());
-                
-                const tableData = [];
-                
-                for (const line of lines) {
-                    // Skip header lines that might contain dashes or equal signs
-                    if (line.includes('---') || line.includes('===') || line.includes('Theme|Description|Quotes|Participants')) {
-                        continue;
-                    }
-                    
-                    // Split by pipe and clean up
-                    const parts = line.split('|').map(part => part.trim());
-                    if (parts.length >= 4) {
-                        tableData.push({
-                            theme: parts[0],
-                            description: parts[1],
-                            quotes: parts[2],
-                            participantCount: parts[3]
-                        });
-                    }
-                }
-                
-                return tableData.length > 0 ? tableData : null;
-            } catch (error) {
-                console.error('Error parsing response:', error);
-                return null;
+        function parseAndDisplayResults(responseText) {
+            const parsedTableData = parseResponseToTable(responseText);
+            const tableView = document.getElementById('tableView');
+            const rawView = document.getElementById('rawView');
+            const viewToggle = document.getElementById('viewToggle');
+            
+            if (parsedTableData && parsedTableData.length > 0) {
+                tableData = parsedTableData;
+                displayResultsTable(parsedTableData);
+                updateSummaryCards(parsedTableData);
+                createCharts(parsedTableData);
+
+                tableView.style.display = 'block';
+                rawView.style.display = 'none';
+                viewToggle.innerHTML = '<i class="fas fa-file-alt"></i> Show Raw Text';
+            } else {
+                rawView.textContent = responseText;
+                tableView.style.display = 'none';
+                rawView.style.display = 'block';
+                viewToggle.innerHTML = '<i class="fas fa-table"></i> Show Table';
             }
+        }
+
+        function updateSummaryCards(tableData) {
+            const totalThemes = tableData.length;
+            const totalParticipants = tableData.reduce((sum, row) => sum + (parseInt(row.participantCount) || 0), 0);
+            const totalQuotes = tableData.filter(row => row.quotes && row.quotes.trim().length > 0).length;
+            
+            // Animate the numbers
+            animateNumber('totalThemes', totalThemes);
+            animateNumber('totalParticipants', totalParticipants);
+            animateNumber('totalQuotes', totalQuotes);
+        }
+
+        function animateNumber(elementId, targetValue) {
+            const element = document.getElementById(elementId);
+            const startValue = 0;
+            const duration = 1000;
+            const startTime = performance.now();
+            
+            function updateNumber(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Easing function for smooth animation
+                const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                const currentValue = Math.round(startValue + (targetValue - startValue) * easeOutQuart);
+                
+                element.textContent = currentValue;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(updateNumber);
+                }
+            }
+            
+            requestAnimationFrame(updateNumber);
         }
 
         function displayResultsTable(tableData) {
@@ -1385,18 +2236,88 @@
             
             tableBody.innerHTML = '';
             
-            tableData.forEach(row => {
+            tableData.forEach((row, index) => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="theme-cell">${row.theme}</td>
-                    <td class="description-cell">${row.description}</td>
-                    <td class="quotes-cell">${row.quotes}</td>
-                    <td><span class="participant-count">${row.participantCount}</span></td>
-                `;
+                
+                // Enhanced theme cell with better formatting
+                const themeCell = `<td class="theme-cell" title="Theme ${index + 1}">${escapeHtml(row.theme)}</td>`;
+                
+                // Enhanced description cell with truncation and tooltip
+                const description = escapeHtml(row.description);
+                const truncatedDescription = description.length > 200 ? description.substring(0, 200) + '...' : description;
+                const descriptionCell = `<td class="description-cell" title="${description}">${truncatedDescription}</td>`;
+                
+                // Enhanced quotes cell with better formatting
+                const quotes = escapeHtml(row.quotes);
+                const truncatedQuotes = quotes.length > 300 ? quotes.substring(0, 300) + '...' : quotes;
+                const quotesCell = `<td class="quotes-cell" title="${quotes}">"${truncatedQuotes}"</td>`;
+                
+                // Enhanced participant count with better styling
+                const participantCount = parseInt(row.participantCount) || 0;
+                const participantCell = `<td><span class="participant-count" title="${participantCount} participants">${participantCount}</span></td>`;
+                
+                tr.innerHTML = themeCell + descriptionCell + quotesCell + participantCell;
+                
+                // Add click event for row expansion
+                tr.addEventListener('click', function() {
+                    showRowDetails(row, index + 1);
+                });
+                
+                tr.style.cursor = 'pointer';
                 tableBody.appendChild(tr);
             });
             
             tableInfo.textContent = `Found ${tableData.length} themes`;
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Function to show detailed row information in a modal-like display
+        function showRowDetails(row, themeNumber) {
+            const modal = document.createElement('div');
+            modal.className = 'row-details-modal';
+            modal.innerHTML = `
+                <div class="modal-backdrop" onclick="closeRowDetails()"></div>
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3><i class="fas fa-tag"></i> Theme ${themeNumber}: ${escapeHtml(row.theme)}</h3>
+                        <button class="modal-close" onclick="closeRowDetails()"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="detail-section">
+                            <h4><i class="fas fa-edit"></i> Description</h4>
+                            <p>${escapeHtml(row.description)}</p>
+                        </div>
+                        <div class="detail-section">
+                            <h4><i class="fas fa-quote-left"></i> Supporting Quotes</h4>
+                            <div class="quotes-detail">"${escapeHtml(row.quotes)}"</div>
+                        </div>
+                        <div class="detail-section">
+                            <h4><i class="fas fa-users"></i> Participant Information</h4>
+                            <div class="participant-detail">
+                                <span class="participant-count large">${row.participantCount}</span>
+                                <span>participants mentioned this theme</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            setTimeout(() => modal.classList.add('show'), 10);
+        }
+
+        function closeRowDetails() {
+            const modal = document.querySelector('.row-details-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.remove(), 300);
+            }
         }
 
         function filterTable() {
@@ -1484,12 +2405,12 @@
             if (tableView.style.display === 'none') {
                 tableView.style.display = 'block';
                 rawView.style.display = 'none';
-                viewToggle.textContent = '📄 Show Raw Text';
+                viewToggle.innerHTML = '<i class="fas fa-file-alt"></i> Show Raw Text';
             } else {
                 tableView.style.display = 'none';
                 rawView.style.display = 'block';
                 rawView.textContent = analysisResponse;
-                viewToggle.textContent = '📊 Show Table';
+                viewToggle.innerHTML = '<i class="fas fa-table"></i> Show Table';
             }
         }
 
@@ -1509,7 +2430,7 @@
             
             return csvRows.join('\n');
         }
-
+        
         async function exportCSV() {
             if (!tableData || tableData.length === 0) {
                 showAlert('No analysis results to export', 'error');
@@ -1522,13 +2443,13 @@
                 
                 // Create and download the CSV file
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
                 
                 showAlert('CSV exported successfully!', 'success');
@@ -1536,7 +2457,7 @@
                 showAlert(`Export failed: ${error.message}`, 'error');
             }
         }
-
+        
         function saveAsText() {
             if (!analysisResponse) {
                 showAlert('No analysis results to save', 'error');
@@ -1564,13 +2485,13 @@
                 
                 // Create and download the text file
                 const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8;' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.txt`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
                 
                 showAlert('Text file saved successfully!', 'success');

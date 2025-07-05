@@ -122,7 +122,7 @@ class AnthropicProvider(BaseProvider):
 
         # Use provided model or default
         model_to_use = model if model != "auto" else "claude-3-5-sonnet-20241022"
-        
+
         msgs = [
             {"role": "user", "content": f"System: {system_message}\n\nUser: {user_message}"},
         ]
