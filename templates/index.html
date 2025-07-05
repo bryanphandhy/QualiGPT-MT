@@ -19,6 +19,7 @@
             --border-color: #dee2e6;
             --accent-color: #007bff;
             --accent-hover: #0056b3;
+            --accent-color-rgb: 0, 123, 255;
             --success-color: #28a745;
             --error-color: #dc3545;
             --warning-color: #ffc107;
@@ -36,6 +37,7 @@
             --border-color: #555555;
             --accent-color: #4dabf7;
             --accent-hover: #74c0fc;
+            --accent-color-rgb: 77, 171, 247;
             --success-color: #51cf66;
             --error-color: #ff6b6b;
             --warning-color: #ffd43b;
@@ -66,22 +68,50 @@
         .header {
             text-align: center;
             margin-bottom: 40px;
-            padding: 20px 0;
-            border-bottom: 2px solid var(--border-color);
+            padding: 40px 0;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-tertiary));
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(var(--accent-color-rgb), 0.1) 50%, transparent 70%);
+            animation: shimmer 3s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 10px;
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            position: relative;
+            z-index: 1;
         }
 
         .header p {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             color: var(--text-secondary);
             max-width: 600px;
             margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
         }
 
         .theme-toggle {
@@ -145,44 +175,95 @@
             cursor: pointer;
             transition: all 0.3s ease;
             background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .upload-area:hover::before {
+            left: 100%;
         }
 
         .upload-area:hover {
             border-color: var(--accent-color);
             background: var(--bg-secondary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
         }
 
         .upload-area.dragover {
             border-color: var(--accent-color);
             background: var(--bg-secondary);
             transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(var(--accent-color-rgb), 0.3);
         }
 
         .upload-icon {
             font-size: 3rem;
             color: var(--text-secondary);
             margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area.uploading .upload-icon {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.7; }
         }
 
         .btn {
-            background: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+            padding: 14px 28px;
+            border-radius: 12px;
             cursor: pointer;
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
-            background: var(--accent-hover);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(var(--accent-color-rgb), 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
         }
 
         .btn:disabled {
@@ -190,6 +271,10 @@
             cursor: not-allowed;
             transform: none;
             box-shadow: none;
+        }
+
+        .btn:disabled::before {
+            display: none;
         }
 
         .btn-secondary {
@@ -223,8 +308,43 @@
             color: var(--text-primary);
         }
 
-        .data-preview {
+        .upload-success {
             background: var(--bg-primary);
+            border: 2px solid var(--success-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .file-icon {
+            font-size: 2.5rem;
+            color: var(--success-color);
+        }
+
+        .file-details h4 {
+            margin: 0 0 5px 0;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+        }
+
+        .file-details p {
+            margin: 2px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .data-preview {
+            background: var(--bg-secondary);
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 20px;
@@ -273,13 +393,14 @@
         .form-group textarea,
         .form-group select {
             width: 100%;
-            padding: 12px 16px;
+            padding: 14px 18px;
             border: 2px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 16px;
             background: var(--bg-primary);
             color: var(--text-primary);
-            transition: border-color 0.3s ease;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
         }
 
         .form-group input:focus,
@@ -287,6 +408,8 @@
         .form-group select:focus {
             outline: none;
             border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
+            transform: translateY(-1px);
         }
 
         .checkbox-group {
@@ -823,7 +946,8 @@
                     if (data.maxTokens) document.getElementById('maxTokens').value = data.maxTokens;
                     if (data.currentData) {
                         currentData = data.currentData;
-                        displayDataPreview(currentData);
+                        // For session data, we don't have headers/filename, so use defaults
+                        displayDataPreview(currentData, null, 'Restored Session Data');
                         document.getElementById('analyzeBtn').disabled = false;
                     }
                     
@@ -1004,6 +1128,17 @@
             const formData = new FormData();
             formData.append('file', file);
             
+            // Show loading state for upload
+            const uploadArea = document.querySelector('.upload-area');
+            const originalContent = uploadArea.innerHTML;
+            uploadArea.innerHTML = `
+                <div class="upload-icon">⏳</div>
+                <p style="margin-top: 10px; color: var(--accent-color); font-weight: 500;">Uploading ${file.name}...</p>
+                <p style="color: var(--text-secondary); font-size: 14px;">Please wait</p>
+            `;
+            uploadArea.style.cursor = 'not-allowed';
+            uploadArea.classList.add('uploading');
+            
             try {
                 const response = await fetch('/upload_file', {
                     method: 'POST',
@@ -1013,28 +1148,59 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    currentData = data.content;
-                    displayDataPreview(data.content);
+                    currentData = data.data_content; // Fix: use data_content instead of content
+                    displayDataPreview(data.data_content, data.headers, file.name);
                     document.getElementById('analyzeBtn').disabled = false;
-                    showAlert('File uploaded successfully!', 'success');
+                    showAlert(`File "${file.name}" uploaded successfully!`, 'success');
                     saveSession();
                 } else {
                     showAlert(`Upload failed: ${data.error}`, 'error');
+                    // Restore original upload area
+                    uploadArea.innerHTML = originalContent;
+                    uploadArea.style.cursor = 'pointer';
+                    uploadArea.classList.remove('uploading');
                 }
             } catch (error) {
                 showAlert(`Upload error: ${error.message}`, 'error');
+                // Restore original upload area
+                uploadArea.innerHTML = originalContent;
+                uploadArea.style.cursor = 'pointer';
+                uploadArea.classList.remove('uploading');
             }
         }
 
-        function displayDataPreview(content) {
+        function displayDataPreview(content, headers, filename) {
             const preview = document.getElementById('filePreview');
+            const fileSize = content.length;
+            const lines = content.split('\n').length;
+            
             preview.innerHTML = `
-                <div class="data-preview">
-                    <strong>Data Preview:</strong><br>
-                    ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}
+                <div class="upload-success">
+                    <div class="file-info">
+                        <div class="file-icon">📄</div>
+                        <div class="file-details">
+                            <h4>${filename}</h4>
+                            <p>${fileSize.toLocaleString()} characters • ${lines} lines</p>
+                            ${headers ? `<p><strong>Columns:</strong> ${headers.join(', ')}</p>` : ''}
+                        </div>
+                        <button class="btn-secondary" onclick="clearUpload()" style="padding: 8px 12px; font-size: 14px;">🗑️ Clear</button>
+                    </div>
+                    <div class="data-preview">
+                        <strong>Data Preview:</strong><br>
+                        ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}
+                    </div>
                 </div>
             `;
             preview.style.display = 'block';
+        }
+        
+        function clearUpload() {
+            currentData = null;
+            document.getElementById('filePreview').style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('fileInput').value = '';
+            saveSession();
+            showAlert('File cleared', 'warning');
         }
 
         async function testAPI() {
