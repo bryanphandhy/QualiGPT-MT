@@ -315,7 +315,13 @@
         <div class="section">
             <h2><span class="step-number">1</span> API Connection</h2>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="password" id="apiKey" placeholder="Enter your OpenAI API key">
+                <select id="providerSelect" style="padding: 12px 16px; border: 2px solid #e9ecef; border-radius: 8px; font-size: 16px;">
+                    <option value="openai" selected>OpenAI GPT-4o</option>
+                    <option value="anthropic">Anthropic Claude</option>
+                    <option value="gemini">Google Gemini</option>
+                    <option value="deepseek">DeepSeek (beta)</option>
+                </select>
+                <input type="password" id="apiKey" placeholder="Enter your provider API key">
                 <button id="connectBtn" onclick="testAPI()">
                     <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0V3z"/>
@@ -437,6 +443,7 @@
         
         async function testAPI() {
             const apiKey = document.getElementById('apiKey').value;
+            const provider = document.getElementById('providerSelect').value;
             if (!apiKey) {
                 showAlert('Please enter an API key', 'error');
                 return;
@@ -448,7 +455,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ api_key: apiKey })
+                    body: JSON.stringify({ api_key: apiKey, provider })
                 });
                 
                 const data = await response.json();
@@ -458,7 +465,7 @@
                     document.getElementById('apiStatus').className = 'status connected';
                     document.getElementById('apiStatus').textContent = 'Connected';
                     document.getElementById('analyzeBtn').disabled = !currentData;
-                    showAlert('Successfully connected to OpenAI API', 'success');
+                    showAlert('Successfully connected to API', 'success');
                 } else {
                     showAlert(`Connection failed: ${data.error}`, 'error');
                 }
@@ -470,30 +477,22 @@
         async function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
-            
             if (!file) return;
-            
             const formData = new FormData();
             formData.append('file', file);
-            
             try {
                 const response = await fetch('/upload_file', {
                     method: 'POST',
                     body: formData
                 });
-                
                 const data = await response.json();
-                
                 if (data.success) {
                     currentData = data;
                     document.getElementById('filePreview').style.display = 'block';
                     document.getElementById('filePreview').textContent = data.preview;
-                    
-                    // Show header inputs if available
                     if (data.headers && data.headers.length > 0) {
                         showHeaderInputs(data.headers);
                     }
-                    
                     document.getElementById('analyzeBtn').disabled = !apiConnected;
                     showAlert('File uploaded successfully', 'success');
                 } else {
@@ -508,14 +507,12 @@
             const container = document.getElementById('headerInputs');
             container.innerHTML = '<p style="font-weight: 500; color: #495057; margin-bottom: 10px;">Header Meanings (Optional):</p>';
             container.style.display = 'block';
-            
             headers.forEach(header => {
                 const group = document.createElement('div');
                 group.className = 'header-input-group';
                 group.innerHTML = `
                     <label>${header}:</label>
-                    <input type="text" class="header-meaning" data-header="${header}" 
-                           placeholder="Describe what this column represents">
+                    <input type="text" class="header-meaning" data-header="${header}" placeholder="Describe what this column represents">
                 `;
                 container.appendChild(group);
             });
@@ -526,24 +523,22 @@
                 showAlert('Please connect to API and upload a file first', 'error');
                 return;
             }
-            
             const apiKey = document.getElementById('apiKey').value;
+            const provider = document.getElementById('providerSelect').value;
             const dataType = document.querySelector('input[name="dataType"]:checked').value;
             const numThemes = document.getElementById('numThemes').value;
             const customPrompt = document.getElementById('customPrompt').value;
             const enableRolePlaying = document.getElementById('rolePlayingCheck').checked;
-            
+
             document.getElementById('loading').className = 'loading active';
             document.getElementById('analyzeBtn').disabled = true;
-            
             try {
                 const response = await fetch('/analyze', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         api_key: apiKey,
+                        provider: provider,
                         data_content: currentData.data_content,
                         data_type: dataType,
                         num_themes: parseInt(numThemes),
@@ -551,16 +546,12 @@
                         enable_role_playing: enableRolePlaying
                     })
                 });
-                
                 const data = await response.json();
-                
                 if (data.success) {
                     analysisResponse = data.response;
                     document.getElementById('results').textContent = data.response;
                     document.getElementById('resultsSection').style.display = 'block';
                     showAlert('Analysis completed successfully', 'success');
-                    
-                    // Scroll to results
                     document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
                 } else {
                     showAlert(`Analysis failed: ${data.error}`, 'error');
@@ -578,16 +569,12 @@
                 showAlert('No analysis results to export', 'error');
                 return;
             }
-            
             try {
                 const response = await fetch('/export_csv', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ response: analysisResponse })
                 });
-                
                 if (response.ok) {
                     const blob = await response.blob();
                     const url = window.URL.createObjectURL(blob);
@@ -613,7 +600,6 @@
                 showAlert('No analysis results to save', 'error');
                 return;
             }
-            
             const blob = new Blob([analysisResponse], { type: 'text/plain' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');

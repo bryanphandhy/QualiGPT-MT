@@ -1,6 +1,11 @@
 from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
-from openai import OpenAI
+# Keep optional OpenAI import for legacy compatibility; primary flow now uses llm_providers
+# but importing it conditionally avoids breaking environments without the package.
+try:
+    from openai import OpenAI  # type: ignore
+except ModuleNotFoundError:
+    OpenAI = None  # type: ignore
 import os
 import io
 import json
@@ -11,6 +16,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 import re
 from datetime import datetime
 import tempfile
+from llm_providers import get_provider
 
 # Download NLTK data if not already present
 import nltk.data
@@ -95,20 +101,16 @@ def test_api():
     try:
         data = request.json
         api_key = data.get('api_key')
+        provider_name = data.get('provider', 'openai')
         
         if not api_key:
             return jsonify({'success': False, 'error': 'API key is required'})
         
-        # Test the API key with new OpenAI client
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": "test"}
-            ],
-            max_tokens=10
-        )
+        try:
+            provider = get_provider(provider_name, api_key)
+            provider.test_connection()
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Connection failed: {e}'})
         
         return jsonify({'success': True, 'message': 'API key is valid'})
     
@@ -163,6 +165,7 @@ def analyze():
     try:
         data = request.json
         api_key = data.get('api_key')
+        provider_name = data.get('provider', 'openai')
         data_content = data.get('data_content')
         data_type = data.get('data_type')
         num_themes = data.get('num_themes', 10)
@@ -173,7 +176,7 @@ def analyze():
             return jsonify({'success': False, 'error': 'API key and data content are required'})
         
         # Create OpenAI client with API key
-        client = OpenAI(api_key=api_key)
+        provider = get_provider(provider_name, api_key)
         
         # Get the appropriate prompt
         if custom_prompt:
@@ -194,24 +197,21 @@ def analyze():
         for i, segment in enumerate(segments):
             combined_message = segment + "\n\n" + prompt
             
-            messages = [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": combined_message}
-            ]
+            # Message list retained for potential debugging/compat; provider.chat consumes
+            # the system and user strings directly, so we don't need the OpenAI-style list.
             
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
+            response_text = provider.chat(
+                system_message,
+                combined_message,
                 temperature=0.7,
-                max_tokens=4000
+                max_tokens=4000,
             )
-            
-            all_responses.append(response.choices[0].message.content)
+            all_responses.append(response_text)
         
         # If multiple segments, merge and re-analyze
         if len(segments) > 1:
             merged_responses = "\n".join(all_responses)
-            final_response = analyze_merged_responses(merged_responses, num_themes, system_message, client)
+            final_response = analyze_merged_responses(merged_responses, num_themes, system_message, provider)
         else:
             final_response = all_responses[0]
         
@@ -258,7 +258,7 @@ def split_into_segments(text, max_tokens=120000):
     
     return segments
 
-def analyze_merged_responses(merged_responses, num_themes, system_message, client):
+def analyze_merged_responses(merged_responses, num_themes, system_message, provider):
     """Analyze merged responses to create a final summary"""
     prompt = f"""This is the result of a thematic analysis of several parts of the dataset. Now, summarize the same themes to generate a new table.
 Please identify the {num_themes} most common key themes from the interview and organize the results in a structured table format.
@@ -280,17 +280,14 @@ IMPORTANT: Output ONLY the table with no additional text, commentary, or explana
 
 Analyze the following merged responses: {merged_responses}"""
     
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": prompt}
-        ],
+    response_text = provider.chat(
+        system_message,
+        prompt,
+        max_tokens=4000,
         temperature=0.7,
-        max_tokens=4000
     )
     
-    return response.choices[0].message.content
+    return response_text
 
 @app.route('/export_csv', methods=['POST'])
 def export_csv():
