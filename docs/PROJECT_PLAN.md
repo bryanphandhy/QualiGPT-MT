@@ -36,7 +36,10 @@ Deliverable: dropdown now lists 5+ providers, each tested via E2E.
 ---
 
 ## 3. User Experience (v1.3)
-* **Rich Result Viewer** – render GPT table into sortable HTML grid.
+* **Rich Result Viewer** – render GPT table into sortable HTML grid. **[DONE]**
+* **Model Selection** – choose model per provider in UI. **[DONE]**
+* **Advanced Settings** – temperature, max tokens, etc. in UI. **[DONE]**
+* **Reliable CSV Export** – client-side, matches table. **[DONE]**
 * **Theme Visualisations** – bar chart of participant counts (Chart.js).
 * **Dark Mode** toggle.
 * **Autosave Sessions** – LocalStorage restore on refresh.
@@ -79,7 +82,7 @@ KPIs: handle 10 concurrent 100k-token jobs under 5 min each.
 |---------|------------------|
 | 1.1 | How-to-contribute guide + code style guide |
 | 1.2 | Provider integration tutorial |
-| 1.3 | User manual with screenshots |
+| 1.3 | User manual with screenshots (in progress, updating for new UI) |
 | 1.4 | Deployment guide (Kubernetes & AWS Fargate) |
 | 2.0 | Research methodology white-paper |
 
@@ -113,8 +116,11 @@ gantt
 ---
 
 ## 11. Done-Definition Checklist
+- [x] Rich result viewer, model selection, advanced settings, and CSV export implemented
+- [ ] Theme visualisations and dark mode
+- [ ] Autosave sessions
 - [ ] Code has ≥95% test pass rate
-- [ ] Docs updated
+- [x] Docs updated (in progress)
 - [ ] Security scan clean
 - [ ] Demo video recorded
 
