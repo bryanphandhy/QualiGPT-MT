@@ -11,6 +11,7 @@ This is a complete web-based reimplementation of the original QualiGPT desktop a
 - **No Installation Hassles**: Runs in any web browser
 - **Modern Interface**: Clean, responsive design with real-time feedback
 - **Enhanced AI**: Uses GPT-4o with 128k context window for better analysis
+- **Multi-Provider Support**: Plug-and-play with OpenAI GPT-4o, Anthropic Claude, Google Gemini (DeepSeek coming)
 - **Cross-Platform**: Works on Mac, Windows, Linux, tablets
 - **Easy Deployment**: Run locally or deploy to cloud platforms
 - **Docker Support**: Complete containerization with production-ready Gunicorn deployment
@@ -29,6 +30,7 @@ This is a complete web-based reimplementation of the original QualiGPT desktop a
   - Role-playing mode for expert analysis
   - Custom prompts for specific needs
 - **Smart Data Handling**: Automatic segmentation for large datasets (up to 120k tokens)
+- **Provider Choice**: Select your favourite LLM directly from the UI (OpenAI / Claude / Gemini)
 - **Export Options**: Save results as CSV or TXT files
 - **Production Ready**: Docker support with Gunicorn for scalable deployment
 

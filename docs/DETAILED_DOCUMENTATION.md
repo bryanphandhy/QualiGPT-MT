@@ -198,4 +198,19 @@ MIT-licensed.  If you publish research using QualiGPT please cite:
 
 ---
 
+## 15. Provider Abstraction Layer
+
+QualiGPT  now ships with a **pluggable LLM layer** defined in `llm_providers.py`.
+
+| Provider | Class | Package | Notes |
+|----------|-------|---------|-------|
+| OpenAI GPT-4o | `OpenAIProvider` | `openai` | Default, 128 k context |
+| Anthropic Claude 3 | `AnthropicProvider` | `anthropic` | Haiku by default; change model string for Sonnet / Opus |
+| Google Gemini-Pro | `GeminiProvider` | `google-generativeai` | 32 k context; `max_tokens` defaults to 2048 |
+| DeepSeek (placeholder) | `DeepSeekProvider` | – | Ready for future SDK |
+
+The web UI exposes these via a dropdown. Backend routes accept a `provider` field (defaults to "openai"). Custom integrations are one subclass away – just implement `test_connection()` and `chat()`.
+
+---
+
 *Happy analysing!* 🚀 
