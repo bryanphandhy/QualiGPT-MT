@@ -1554,6 +1554,11 @@
                 <input type="checkbox" id="enableRolePlaying">
                 <label for="enableRolePlaying">Enable Role-Playing Mode (Expert Analysis)</label>
             </div>
+            <!-- New: Force English output checkbox -->
+            <div class="checkbox-group">
+                <input type="checkbox" id="englishOutput">
+                <label for="englishOutput">Output Analysis in English (translate & fix grammar)</label>
+            </div>
             
             <div class="form-group">
                 <label for="customPrompt">Custom Prompt (Optional):</label>
@@ -1724,6 +1729,7 @@
                 numThemes: document.getElementById('numThemes').value,
                 customPrompt: document.getElementById('customPrompt').value,
                 enableRolePlaying: document.getElementById('enableRolePlaying').checked,
+                englishOutput: document.getElementById('englishOutput').checked,
                 temperature: document.getElementById('temperature').value,
                 maxTokens: document.getElementById('maxTokens').value,
                 currentData: currentData
@@ -1755,6 +1761,7 @@
                     if (data.numThemes) document.getElementById('numThemes').value = data.numThemes;
                     if (data.customPrompt) document.getElementById('customPrompt').value = data.customPrompt;
                     if (data.enableRolePlaying !== undefined) document.getElementById('enableRolePlaying').checked = data.enableRolePlaying;
+                    if (data.englishOutput !== undefined) document.getElementById('englishOutput').checked = data.englishOutput;
                     if (data.temperature) document.getElementById('temperature').value = data.temperature;
                     if (data.maxTokens) document.getElementById('maxTokens').value = data.maxTokens;
                     if (data.currentData) {
@@ -2082,6 +2089,7 @@
             const enableRolePlaying = document.getElementById('enableRolePlaying').checked;
             const temperature = parseFloat(document.getElementById('temperature').value);
             const maxTokens = parseInt(document.getElementById('maxTokens').value);
+            const englishOutput = document.getElementById('englishOutput').checked;
             
             showLoading('Analyzing Data...', 'Processing your qualitative data with AI...');
             
@@ -2107,7 +2115,8 @@
                         custom_prompt: customPrompt,
                         enable_role_playing: enableRolePlaying,
                         temperature: temperature,
-                        max_tokens: maxTokens
+                        max_tokens: maxTokens,
+                        english_output: englishOutput
                     })
                 });
                 
@@ -2136,64 +2145,90 @@
         }
 
         function parseResponseToTable(responseText) {
+            /*
+             * Robustly convert the raw model response into a structured JS array.
+             * 1. Locate text between the ********** delimiters.
+             * 2. Remove the header and any separator lines.
+             * 3. Detect the start of a new row whenever a line begins with a pipe
+             *    and (heuristically) contains at least four cells.
+             * 4. Merge continuation lines (quotes that overflow) into the current row.
+             * 5. Split & clean the four final cells and push to tableData.
+             */
             try {
-                const lines = responseText.split(/\r?\n/).map(l => l.trim());
+                const ROW_START = /^\|.*\|/;            // line that starts & ends with a pipe
+                const HEADER_SEP = /^(\|?\s*-{3,}\s*)+$/; // |---|---|---|---|
 
-                // 1. Find delimiter indices (**********)
-                const delimIdx = lines.reduce((acc, line, idx) => {
-                    if (line === '**********') acc.push(idx);
-                    return acc;
-                }, []);
+                /* ---------- helper functions ---------- */
+                const isDelimiter = line => line === '**********';
+                const stripPipes = cell => cell.replace(/^['"`\s]+|['"`\s]+$/g, '').trim();
 
-                if (delimIdx.length < 2) return null;
-
-                const tableLines = lines.slice(delimIdx[0] + 1, delimIdx[delimIdx.length - 1]);
-
-                if (tableLines.length === 0) return null;
-
-                // Remove header (first line) and optional separator (second line that contains only dashes or pipes and dashes)
-                tableLines.shift();
-                if (tableLines.length > 0 && /^(\|?\s*-{3,}\s*)+$/.test(tableLines[0])) {
-                    tableLines.shift();
-                }
-
-                const tableData = [];
-
-                tableLines.forEach(rawLine => {
-                    // Trim trailing row terminator '---'
-                    rawLine = rawLine.replace(/-{3,}\s*$/, '').trim();
-
-                    // Ensure line contains at least one pipe
-                    if (!rawLine.includes('|')) return;
-
-                    // Split on unescaped pipes – simplest assumption: model never places '|'
-                    let cells = rawLine.split('|');
-
-                    // Remove empty first/last caused by leading/trailing pipe
+                function splitRowIntoCells(raw) {
+                    // naive split first
+                    let cells = raw.split('|');
+                    // drop empty caused by leading/trailing pipe
                     if (cells[0].trim() === '') cells.shift();
                     if (cells.length && cells[cells.length - 1].trim() === '') cells.pop();
 
-                    // After cleaning we expect 4 cells but tolerate extras by joining middle cells back to quotes
-                    if (cells.length < 4) return;
+                    // if stray pipes produced >4 cells, merge extras into Quotes (index 2)
                     if (cells.length > 4) {
-                        // Merge any extra cells (usually quotes containing stray pipes) back into the quotes cell
-                        const extra = cells.splice(2, cells.length - 3);
-                        cells[2] = extra.join('|');
+                        const extras = cells.splice(2, cells.length - 3);
+                        cells[2] = extras.join('|');
                     }
+                    return cells.slice(0, 4).map(stripPipes); // ensure exactly 4
+                }
 
-                    const [rawTheme, rawDescription, rawQuotes, rawCount] = cells.map(c => c.replace(/^['"`\s]+|['"`\s]+$/g, ''));
+                /* ---------- main logic ---------- */
+                const lines = responseText.split(/\r?\n/).map(l => l.trim());
 
-                    tableData.push({
-                        theme: rawTheme,
-                        description: rawDescription,
-                        quotes: rawQuotes,
-                        participantCount: rawCount
-                    });
+                // 1. Locate table boundaries
+                const delimIdx = lines.reduce((acc, line, idx) => {
+                    if (isDelimiter(line)) acc.push(idx);
+                    return acc;
+                }, []);
+                if (delimIdx.length < 2) return null;
+
+                let tableLines = lines.slice(delimIdx[0] + 1, delimIdx[delimIdx.length - 1]);
+
+                // 2. Remove header + separator
+                if (tableLines.length && /theme/i.test(tableLines[0])) tableLines.shift();
+                if (tableLines.length && HEADER_SEP.test(tableLines[0])) tableLines.shift();
+
+                // 3. Build logical rows
+                const rawRows = [];
+                let current = '';
+
+                const pushCurrent = () => {
+                    if (current.trim()) {
+                        rawRows.push(current.trim());
+                        current = '';
+                    }
+                };
+
+                tableLines.forEach(line => {
+                    if (!line || HEADER_SEP.test(line)) return; // skip blank/separator
+
+                    if (ROW_START.test(line) && current) {
+                        // new row begins – commit previous
+                        pushCurrent();
+                    }
+                    // append (space keeps words separate)
+                    current += (current ? ' ' : '') + line;
                 });
+                pushCurrent(); // commit last row
+
+                // 4. Parse each raw row into cells
+                const tableData = rawRows.reduce((acc, raw) => {
+                    if (!raw.includes('|')) return acc;
+                    const cells = splitRowIntoCells(raw);
+                    if (cells.length !== 4) return acc;
+                    const [theme, description, quotes, count] = cells;
+                    acc.push({ theme, description, quotes, participantCount: count });
+                    return acc;
+                }, []);
 
                 return tableData.length ? tableData : null;
             } catch (err) {
-                console.error('Robust table parse error:', err);
+                console.error('parseResponseToTable error', err);
                 return null;
             }
         }

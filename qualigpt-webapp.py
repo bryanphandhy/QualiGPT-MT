@@ -214,6 +214,9 @@ def analyze():
         temperature = data.get('temperature', 0.7)  # Get temperature setting
         max_tokens = data.get('max_tokens', 4000)   # Get max tokens setting
         
+        # NEW: optional flag to force English output and grammar correction
+        english_output = data.get('english_output', False)
+        
         if not api_key or not data_content:
             return jsonify({'success': False, 'error': 'API key and data content are required'})
         
@@ -224,6 +227,13 @@ def analyze():
         vietnamese_instruction = (
             " Nếu dữ liệu nguồn có vẻ được viết bằng tiếng Việt, hãy trình bày toàn bộ bảng (bao gồm tiêu đề cột, mô tả, trích dẫn) bằng tiếng Việt."  # noqa: E501
         )
+
+        english_instruction = (
+            " Present the entire table in English, with correct grammar and spelling, translating and grammar-correcting any participant quotes as needed."
+        )
+
+        # Choose language-specific instruction
+        language_instruction = english_instruction if english_output else vietnamese_instruction
 
         # Prepare the base prompt (may be updated later if we pre-detect themes)
         if custom_prompt:
@@ -267,11 +277,11 @@ def analyze():
         if enable_role_playing:
             system_message = (
                 "You are an excellent qualitative data analyst and qualitative research expert. "
-                "Follow the output format instructions exactly with no additional commentary." + vietnamese_instruction
+                "Follow the output format instructions exactly with no additional commentary." + language_instruction
             )
         else:
             system_message = (
-                "You are a helpful assistant. Follow the output format instructions exactly with no additional commentary." + vietnamese_instruction
+                "You are a helpful assistant. Follow the output format instructions exactly with no additional commentary." + language_instruction
             )
         
         # Split data into segments if it's too large
