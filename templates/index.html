@@ -1293,8 +1293,10 @@
 
         /* Enhanced charts styling */
         .charts-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
+            /* Switch to flexible layout so graphs don't occupy the entire width on large screens */
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 25px;
             margin-top: 25px;
         }
@@ -1307,6 +1309,10 @@
             border: 1px solid var(--border-color);
             position: relative;
             overflow: hidden;
+            /* Limit the maximum size so each chart remains compact */
+            max-width: 420px;
+            width: 100%;
+            margin: 0 auto; /* center inside flex container */
         }
 
         .chart-card::before {
@@ -1326,6 +1332,12 @@
             margin-bottom: 20px;
             text-align: center;
             position: relative;
+        }
+
+        /* Constrain the canvas height to avoid very tall charts */
+        .chart-card canvas {
+            height: 260px !important; /* force a reasonable height regardless of screen width */
+            max-height: 260px !important;
         }
 
         /* Enhanced responsive design */
@@ -2127,42 +2139,56 @@
             try {
                 const lines = responseText.split(/\r?\n/).map(l => l.trim());
 
-                // Find the first table row that begins with a pipe
-                const startIdx = lines.findIndex(l => l.startsWith('|'));
-                if (startIdx === -1) return null;
+                // 1. Find delimiter indices (**********)
+                const delimIdx = lines.reduce((acc, line, idx) => {
+                    if (line === '**********') acc.push(idx);
+                    return acc;
+                }, []);
 
-                // Collect contiguous lines that begin with a pipe
-                const tableLines = [];
-                for (let i = startIdx; i < lines.length; i++) {
-                    const line = lines[i];
-                    if (!line.startsWith('|')) break;
-                    tableLines.push(line);
+                if (delimIdx.length < 2) return null;
+
+                const tableLines = lines.slice(delimIdx[0] + 1, delimIdx[delimIdx.length - 1]);
+
+                if (tableLines.length === 0) return null;
+
+                // Remove header (first line) and optional separator (second line that contains only dashes or pipes and dashes)
+                tableLines.shift();
+                if (tableLines.length > 0 && /^(\|?\s*-{3,}\s*)+$/.test(tableLines[0])) {
+                    tableLines.shift();
                 }
 
-                if (tableLines.length < 2) return null; // Need header + at least one data row
-
-                // Remove header row
-                tableLines.shift();
-
                 const tableData = [];
+
                 tableLines.forEach(rawLine => {
-                    // Remove trailing markdown row separator if present
-                    rawLine = rawLine.replace(/\|\s*-{3,}\s*$/, '').trim();
+                    // Trim trailing row terminator '---'
+                    rawLine = rawLine.replace(/-{3,}\s*$/, '').trim();
 
-                    // Split into cells
+                    // Ensure line contains at least one pipe
+                    if (!rawLine.includes('|')) return;
+
+                    // Split on unescaped pipes – simplest assumption: model never places '|'
                     let cells = rawLine.split('|');
-                    // Remove first empty element if the line starts with a pipe
+
+                    // Remove empty first/last caused by leading/trailing pipe
                     if (cells[0].trim() === '') cells.shift();
-                    // Remove last empty element if the line ends with a pipe
-                    if (cells[cells.length - 1].trim() === '') cells.pop();
+                    if (cells.length && cells[cells.length - 1].trim() === '') cells.pop();
 
-                    if (cells.length < 4) return; // Skip incomplete rows
+                    // After cleaning we expect 4 cells but tolerate extras by joining middle cells back to quotes
+                    if (cells.length < 4) return;
+                    if (cells.length > 4) {
+                        // Merge any extra cells (usually quotes containing stray pipes) back into the quotes cell
+                        const extra = cells.splice(2, cells.length - 3);
+                        cells[2] = extra.join('|');
+                    }
 
-                    // Clean each cell
-                    cells = cells.map(c => c.replace(/^['"`\s]+|['"`\s]+$/g, ''));
+                    const [rawTheme, rawDescription, rawQuotes, rawCount] = cells.map(c => c.replace(/^['"`\s]+|['"`\s]+$/g, ''));
 
-                    const [theme, description, quotes, participantCount] = cells;
-                    tableData.push({ theme, description, quotes, participantCount });
+                    tableData.push({
+                        theme: rawTheme,
+                        description: rawDescription,
+                        quotes: rawQuotes,
+                        participantCount: rawCount
+                    });
                 });
 
                 return tableData.length ? tableData : null;

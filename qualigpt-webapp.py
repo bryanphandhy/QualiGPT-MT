@@ -47,7 +47,7 @@ Please identify the top {num_themes} key themes from the interview and organize 
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains direct quotations from participants that support the identified theme.
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted as follows:
 Each column should be separated by a '|' symbol, and there should be no extra '|' symbols within the data. Each row should end with '---'.
@@ -62,7 +62,7 @@ Please identify the {num_themes} most common key themes from the interview and o
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains direct quotations from participants that support the identified theme.
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme. Please ensure this count reflects the actual number of participants who discussed each theme.
 The table should be formatted strictly as follows:
 The table should have 4 columns only.
@@ -81,7 +81,7 @@ Please identify the top {num_themes} key themes from the interview and organize 
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains direct quotations from participants that support the identified theme.
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted as follows:
 Each column should be separated by a '|' symbol, and there should be no extra '|' symbols within the data. Each row should end with '---'.
@@ -150,11 +150,38 @@ def upload_file():
         elif file_ext == 'xlsx':
             data = pd.read_excel(file)
         elif file_ext == 'docx':
-            doc = Document(file)
-            full_text = []
-            for para in doc.paragraphs:
-                if para.text.strip():
-                    full_text.append(para.text)
+            # Extract text from DOCX, including tables as many interview/focus-group transcripts are stored there
+            def _extract_text_from_docx(file_obj):
+                """Return a list of non-empty text lines from a DOCX file, looking at paragraphs *and* table cells."""
+                doc = Document(file_obj)
+                lines: list[str] = []
+
+                # Paragraphs
+                for para in doc.paragraphs:
+                    text = para.text.strip()
+                    if text:
+                        lines.append(text)
+
+                # Tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            cell_text = cell.text.strip()
+                            if cell_text:
+                                # Split on hard line-breaks within the cell to mimic line-by-line behaviour
+                                for piece in cell_text.split("\n"):
+                                    piece = piece.strip()
+                                    if piece:
+                                        lines.append(piece)
+
+                return lines
+
+            full_text = _extract_text_from_docx(file)
+
+            # Fallback if nothing extracted – avoids empty DataFrame that breaks downstream steps
+            if not full_text:
+                full_text = ["(No readable text detected in DOCX)"]
+
             data = pd.DataFrame(full_text, columns=['Content'])
         
         # Convert data to string format
@@ -183,6 +210,7 @@ def analyze():
         num_themes = data.get('num_themes', 10)
         custom_prompt = data.get('custom_prompt', '')
         enable_role_playing = data.get('enable_role_playing', False)
+        pre_detect_themes = data.get('pre_detect_themes', False)  # NEW optional flow
         temperature = data.get('temperature', 0.7)  # Get temperature setting
         max_tokens = data.get('max_tokens', 4000)   # Get max tokens setting
         
@@ -192,17 +220,59 @@ def analyze():
         # Create provider with API key
         provider = get_provider(provider_name, api_key)
         
-        # Get the appropriate prompt
+        # Instruct the model to keep output language consistent with the input (e.g., Vietnamese source ➜ Vietnamese output)
+        vietnamese_instruction = (
+            " Nếu dữ liệu nguồn có vẻ được viết bằng tiếng Việt, hãy trình bày toàn bộ bảng (bao gồm tiêu đề cột, mô tả, trích dẫn) bằng tiếng Việt."  # noqa: E501
+        )
+
+        # Prepare the base prompt (may be updated later if we pre-detect themes)
         if custom_prompt:
             prompt = custom_prompt
         else:
             prompt = PROMPTS.get(data_type, PROMPTS['Interview']).format(num_themes=num_themes)
-        
+
+        # Optional pre-detection of themes: makes a quick first pass to list key themes, then we reuse them
+        detected_themes: list[str] | None = None
+        if pre_detect_themes:
+            detect_prompt = (
+                f"Identify the {num_themes} most significant themes discussed in the dataset. "
+                "Output ONLY the theme names, each on its own line, with NO numbering, bullets, or extra commentary."
+            )
+
+            # One-shot call on the entire data (not split) to minimise latency
+            try:
+                themes_response = provider.chat(
+                    system_message if 'system_message' in locals() else "You are a helpful assistant.",
+                    data_content + "\n\n" + detect_prompt,
+                    model=model_name or "auto",
+                    temperature=temperature,
+                    max_tokens=512,
+                )
+
+                raw_lines = themes_response.strip().splitlines()
+                cleaned = [re.sub(r"^[\s\-–•*\d\.]+", "", ln).strip() for ln in raw_lines if ln.strip()]
+                detected_themes = [t for t in cleaned if t]
+            except Exception as _e:
+                detected_themes = None  # fail gracefully – continue with normal prompt
+
+            if detected_themes:
+                # Constrain the main prompt to these themes and clarify behaviour when quotes are missing
+                joined_themes = ", ".join([f'\"{t}\"' for t in detected_themes])
+                prompt += (
+                    "\n\nONLY include the following themes in your table: " + joined_themes + ". "
+                    "If a theme has no supporting quotations, leave the 'Quotes' cell empty or omit that theme entirely."
+                )
+
         # Add role playing if enabled
         if enable_role_playing:
-            system_message = "You are an excellent qualitative data analyst and qualitative research expert. Follow the output format instructions exactly with no additional commentary."
+            system_message = (
+                "You are an excellent qualitative data analyst and qualitative research expert. "
+                "Follow the output format instructions exactly with no additional commentary." + vietnamese_instruction
+            )
         else:
-            system_message = "You are a helpful assistant. Follow the output format instructions exactly with no additional commentary."
+            system_message = (
+                "You are a helpful assistant. Follow the output format instructions exactly with no additional commentary." + vietnamese_instruction
+            )
         
         # Split data into segments if it's too large
         segments = split_into_segments(data_content)
@@ -286,7 +356,7 @@ Please identify the {num_themes} most common key themes from the interview and o
 The table should include the following columns:
 'Theme': Represents the main idea or topic identified from the interview.
 'Description': Provides a brief explanation or summary of the theme.
-'Quotes': Contains direct quotations from participants that support the identified theme.
+'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted strictly as follows:
 - Start the table with '**********'.
