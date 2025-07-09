@@ -2674,6 +2674,8 @@
             const parsedData = [];
             let isFirstDataRow = true;
             
+            const participantCodeRegex = /\[([A-Za-z0-9_-]+)\]/g;
+            
             for (const line of tableContent) {
                 const trimmedLine = line.trim();
                 if (trimmedLine && trimmedLine.includes('|') && !trimmedLine.startsWith('|---')) {
@@ -2697,33 +2699,38 @@
                     }
                     
                     if (cells.length >= 3) { // At least Theme, Description, and one more field
-                        // Ensure we have exactly 4 fields
+                        // Ensure exactly 4 fields
                         while (cells.length < 4) {
                             cells.push('');
                         }
                         
-                        // Clean up cell content - remove quotes and extra formatting
+                        // Clean up cell content
                         const cleanedCells = cells.slice(0, 4).map(cell => {
-                            return cell.replace(/^['"]|['"]$/g, '').replace(/---$/, '').trim();
+                            return cell.replace(/^['"]|['"]$/g, '').replace(/---$/g, '').trim();
                         });
+                        
+                        // Compute participant count based on unique IDs in quotes
+                        const quotesText = cleanedCells[2];
+                        const ids = new Set();
+                        let match;
+                        while ((match = participantCodeRegex.exec(quotesText)) !== null) {
+                            ids.add(match[1]);
+                        }
+                        const participantCount = ids.size;
                         
                         const rowData = {
                             theme: cleanedCells[0] || '',
                             description: cleanedCells[1] || '',
                             quotes: cleanedCells[2] || '',
-                            participantCount: cleanedCells[3] || '0'
+                            participantCount: participantCount
                         };
                         
-                        // Only add if theme is not empty
-                        if (rowData.theme) {
-                            parsedData.push(rowData);
-                        }
+                        if (rowData.theme) parsedData.push(rowData);
                     }
                     isFirstDataRow = false;
                 }
             }
             
-            console.log('Parsed table data:', parsedData);
             return parsedData.length > 0 ? parsedData : null;
         }
 

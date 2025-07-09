@@ -49,12 +49,10 @@ def extract_participant_id(filename):
     return participant_id if participant_id else 'Unknown'
 
 def add_participant_codes_to_content(content, participant_id):
-    """Add participant codes to content for better identification in quotes"""
+    """Prefix every line of content with the participant code in square brackets so the LLM can attribute quotes accurately."""
     lines = content.split('\n')
-    # Add participant ID context at the beginning
-    coded_content = f"[PARTICIPANT: {participant_id}]\n"
-    coded_content += '\n'.join(lines)
-    return coded_content
+    coded_lines = [f"[{participant_id}] {ln.strip()}" for ln in lines if ln.strip()]
+    return '\n'.join(coded_lines)
 
 # Prompt templates
 PROMPTS = {
