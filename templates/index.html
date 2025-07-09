@@ -2205,6 +2205,9 @@
                         createCharts(tableData, `${baseId}-themeChart`, `${baseId}-participantChart`);
                         displayResultsTable(tableData, `${baseId}-tableBody`, `${baseId}-tableInfo`);
                         addEventListenersForReport(baseId, tableData, report.analysis);
+                    } else {
+                        console.log(`Failed to parse table data for report: ${report.filename}`);
+                        console.log('Raw analysis:', report.analysis);
                     }
                 });
             });
@@ -2314,10 +2317,15 @@
 
                 viewToggle.innerHTML = '<i class="fas fa-file-alt"></i> Show Raw Text';
             } else {
+                console.log('Failed to parse table data, showing raw response');
+                console.log('Raw response:', responseText);
                 rawView.textContent = responseText;
                 tableView.style.display = 'none';
                 rawView.style.display = 'block';
                 viewToggle.innerHTML = '<i class="fas fa-table"></i> Show Table';
+                
+                // Show a helpful message to the user
+                showAlert('Analysis completed but could not parse the structured table. Please check the raw text output below.', 'warning');
             }
         }
 
@@ -2618,6 +2626,86 @@
             `);
             printWindow.document.close();
             printWindow.print();
+        }
+
+        function parseResponseToTable(responseText) {
+            // Parse the AI response to extract table data
+            if (!responseText) return null;
+            
+            const lines = responseText.trim().split("\n");
+            
+            // Find table delimiters (********** markers)
+            const delimiterIndices = [];
+            lines.forEach((line, index) => {
+                if (line.trim() === "**********") {
+                    delimiterIndices.push(index);
+                }
+            });
+            
+            if (delimiterIndices.length < 2) {
+                console.log('No table delimiters found in response');
+                return null;
+            }
+            
+            const startIndex = delimiterIndices[0];
+            const endIndex = delimiterIndices[delimiterIndices.length - 1];
+            const tableContent = lines.slice(startIndex + 1, endIndex);
+            
+            // Parse table rows
+            const parsedData = [];
+            let isFirstDataRow = true;
+            
+            for (const line of tableContent) {
+                const trimmedLine = line.trim();
+                if (trimmedLine && trimmedLine.includes('|') && !trimmedLine.startsWith('|---')) {
+                    // Split by | and clean up
+                    let cells = trimmedLine.split('|').map(cell => cell.trim());
+                    
+                    // Remove empty cells at start and end
+                    while (cells.length > 0 && cells[0] === '') {
+                        cells.shift();
+                    }
+                    while (cells.length > 0 && cells[cells.length - 1] === '') {
+                        cells.pop();
+                    }
+                    
+                    // Skip header row if it contains column names
+                    if (isFirstDataRow && cells.length === 4 && 
+                        (cells[0].toLowerCase().includes('theme') || 
+                         cells[0].includes("'Theme'"))) {
+                        isFirstDataRow = false;
+                        continue;
+                    }
+                    
+                    if (cells.length >= 3) { // At least Theme, Description, and one more field
+                        // Ensure we have exactly 4 fields
+                        while (cells.length < 4) {
+                            cells.push('');
+                        }
+                        
+                        // Clean up cell content - remove quotes and extra formatting
+                        const cleanedCells = cells.slice(0, 4).map(cell => {
+                            return cell.replace(/^['"]|['"]$/g, '').replace(/---$/, '').trim();
+                        });
+                        
+                        const rowData = {
+                            theme: cleanedCells[0] || '',
+                            description: cleanedCells[1] || '',
+                            quotes: cleanedCells[2] || '',
+                            participantCount: cleanedCells[3] || '0'
+                        };
+                        
+                        // Only add if theme is not empty
+                        if (rowData.theme) {
+                            parsedData.push(rowData);
+                        }
+                    }
+                    isFirstDataRow = false;
+                }
+            }
+            
+            console.log('Parsed table data:', parsedData);
+            return parsedData.length > 0 ? parsedData : null;
         }
 
         function showAlert(message, type) {
