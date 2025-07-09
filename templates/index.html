@@ -1523,27 +1523,40 @@
                 <p style="margin-top: 10px; color: var(--accent-color); font-weight: 500;">Click to upload or drag and drop</p>
                 <p style="color: var(--text-secondary); font-size: 14px;">Supports CSV, XLSX, DOCX (max 16MB)</p>
             </div>
-            <input type="file" id="fileInput" accept=".csv,.xlsx,.docx" style="display: none;" onchange="handleFileSelect(event)">
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.docx" style="display: none;" onchange="handleFileSelect(event)" multiple>
             <div id="filePreview" style="display: none;"></div>
         </div>
 
         <!-- Step 3: Analysis Configuration -->
         <div class="section">
             <h2><span class="step-number">3</span> Analysis Configuration</h2>
+            <div class="form-group">
+                <label for="analysisMode">Analysis Mode:</label>
                 <div class="radio-group">
+                    <div class="radio-option">
+                        <input type="radio" id="combinedReport" name="analysisMode" value="combined" checked>
+                        <label for="combinedReport">Combined Report</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" id="separateReports" name="analysisMode" value="separate">
+                        <label for="separateReports">Separate Reports</label>
+                    </div>
+                </div>
+            </div>
+            <div class="radio-group">
                 <div class="radio-option">
                     <input type="radio" id="interview" name="dataType" value="Interview" checked>
                     <label for="interview">Interview</label>
-                    </div>
+                </div>
                 <div class="radio-option">
                     <input type="radio" id="focusGroup" name="dataType" value="Focus Group">
                     <label for="focusGroup">Focus Group</label>
-                    </div>
+                </div>
                 <div class="radio-option">
                     <input type="radio" id="socialMedia" name="dataType" value="Social Media Posts">
                     <label for="socialMedia">Social Media Posts</label>
-                    </div>
                 </div>
+            </div>
             
             <div class="form-group">
                 <label for="numThemes">Number of Themes (1-20):</label>
@@ -1575,26 +1588,26 @@
                 <div class="results-summary" id="resultsSummary">
                     <div class="summary-card">
                         <i class="fas fa-tags"></i>
-                    <div>
+                        <div>
                             <span class="summary-number" id="totalThemes">0</span>
                             <span class="summary-label">Themes</span>
-                    </div>
+                        </div>
                     </div>
                     <div class="summary-card">
                         <i class="fas fa-users"></i>
-                    <div>
+                        <div>
                             <span class="summary-number" id="totalParticipants">0</span>
                             <span class="summary-label">Participants</span>
-                    </div>
+                        </div>
                     </div>
                     <div class="summary-card">
                         <i class="fas fa-quote-left"></i>
-                    <div>
+                        <div>
                             <span class="summary-number" id="totalQuotes">0</span>
                             <span class="summary-label">Quotes</span>
+                        </div>
                     </div>
                 </div>
-            </div>
             </div>
             
             <!-- Charts Section -->
@@ -1608,8 +1621,8 @@
                         <div class="chart-title">Participant Count by Theme</div>
                         <canvas id="participantChart"></canvas>
                     </div>
+                </div>
             </div>
-        </div>
         
             <!-- Table View -->
             <div id="tableView" class="results-table-container">
@@ -1617,11 +1630,11 @@
                     <div style="display: flex; align-items: center; gap: 15px;">
                         <div class="search-container">
                             <i class="fas fa-search search-icon"></i>
-                            <input type="text" id="searchBox" class="search-box" placeholder="Search themes, descriptions, or quotes..." oninput="filterTable()">
+                            <input type="text" id="searchBox" class="search-box" placeholder="Search themes, descriptions, or quotes...">
                         </div>
-                        <button class="raw-toggle" onclick="toggleView()" id="viewToggle">
+                        <button class="raw-toggle" id="viewToggle">
                             <i class="fas fa-file-alt"></i> Show Raw Text
-            </button>
+                        </button>
                     </div>
                     <div class="table-info">
                         <span id="tableInfo">Found 0 themes</span>
@@ -1631,44 +1644,37 @@
                     <table class="results-table" id="resultsTable">
                         <thead>
                             <tr>
-                                <th class="sortable" onclick="sortTable(0)">Theme</th>
-                                <th class="sortable" onclick="sortTable(1)">Description</th>
-                                <th class="sortable" onclick="sortTable(2)">Quotes</th>
-                                <th class="sortable" onclick="sortTable(3)">Participants</th>
+                                <th class="sortable" data-column-index="0">Theme</th>
+                                <th class="sortable" data-column-index="1">Description</th>
+                                <th class="sortable" data-column-index="2">Quotes</th>
+                                <th class="sortable" data-column-index="3">Participants</th>
                             </tr>
                         </thead>
                         <tbody id="resultsTableBody">
                         </tbody>
                     </table>
+                </div>
             </div>
-        </div>
         
-            <!-- Raw View -->
+            <!-- Raw View (used as a container for separate reports) -->
             <div id="rawView" class="raw-view" style="display: none;"></div>
             
-            <!-- Export Buttons -->
-            <div class="export-buttons">
-                <button class="export-btn" onclick="exportCSV()">
-                    <i class="fas fa-file-csv"></i> Export CSV
-                </button>
-                <button class="export-btn secondary" onclick="saveAsText()">
-                    <i class="fas fa-file-alt"></i> Save as Text
-                </button>
-                <button class="export-btn print" onclick="printTable()">
-                    <i class="fas fa-print"></i> Print Table
-                </button>
+            <!-- Export Buttons for Combined Report -->
+            <div class="export-buttons" id="mainExportButtons">
+                <button class="export-btn export-csv"><i class="fas fa-file-csv"></i> Export CSV</button>
+                <button class="export-btn secondary export-txt"><i class="fas fa-file-alt"></i> Save as Text</button>
+                <button class="export-btn print export-print"><i class="fas fa-print"></i> Print Table</button>
             </div>
         </div>
     </div>
     
     <script>
         let apiConnected = false;
-        let currentData = null;
+        let currentData = [];
         let analysisResponse = null;
-        let tableData = null; // Store parsed table data for export
+        let tableData = null; // Store parsed table data for export for the COMBINED report
         let currentTheme = 'light'; // Track current theme
-        let themeChart = null;
-        let participantChart = null;
+        let chartInstances = {}; // Use an object to store chart instances by baseId
         
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
@@ -1767,7 +1773,7 @@
                     if (data.currentData) {
                         currentData = data.currentData;
                         // For session data, we don't have headers/filename, so use defaults
-                        displayDataPreview(currentData, null, 'Restored Session Data');
+                        displayFilesPreview(currentData);
                         document.getElementById('analyzeBtn').disabled = false;
                     }
                     
@@ -1796,18 +1802,28 @@
         }
 
         // Chart Functions
-        function createCharts(tableData) {
+        function createCharts(tableData, themeChartId, participantChartId) {
             if (!tableData || tableData.length === 0) return;
+            
+            const baseId = themeChartId.replace('-themeChart', '');
+
+            // Destroy previous charts for this specific report card if they exist
+            if (chartInstances[baseId]) {
+                if(chartInstances[baseId].themeChart) chartInstances[baseId].themeChart.destroy();
+                if(chartInstances[baseId].participantChart) chartInstances[baseId].participantChart.destroy();
+            }
             
             // Prepare data for charts
             const themes = tableData.map(row => row.theme);
             const participantCounts = tableData.map(row => parseInt(row.participantCount) || 0);
             
-            // Create theme distribution chart (pie chart)
-            const themeCtx = document.getElementById('themeChart').getContext('2d');
-            if (themeChart) themeChart.destroy();
-            
-            themeChart = new Chart(themeCtx, {
+            const themeCtx = document.getElementById(themeChartId);
+            const participantCtx = document.getElementById(participantChartId);
+
+            if (!themeCtx || !participantCtx) return;
+
+            // Create theme distribution chart (doughnut chart)
+            const newThemeChart = new Chart(themeCtx.getContext('2d'), {
                 type: 'doughnut',
                 data: {
                     labels: themes,
@@ -1839,10 +1855,7 @@
             });
             
             // Create participant count chart (bar chart)
-            const participantCtx = document.getElementById('participantChart').getContext('2d');
-            if (participantChart) participantChart.destroy();
-            
-            participantChart = new Chart(participantCtx, {
+            const newParticipantChart = new Chart(participantCtx.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: themes,
@@ -1886,9 +1899,9 @@
                     }
                 }
             });
-            
-            // Show charts section
-            document.getElementById('chartsSection').style.display = 'block';
+
+            // Store new instances
+            chartInstances[baseId] = { themeChart: newThemeChart, participantChart: newParticipantChart };
         }
 
         // Updated Functions
@@ -1920,17 +1933,17 @@
         }
 
         function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) {
-                uploadFile(file);
+            const files = event.target.files;
+            if (files.length > 0) {
+                uploadFiles(files);
             }
         }
 
         function handleDrop(event) {
             event.preventDefault();
-            const file = event.dataTransfer.files[0];
-            if (file) {
-                uploadFile(file);
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                uploadFiles(files);
             }
         }
 
@@ -1944,16 +1957,18 @@
             event.currentTarget.classList.remove('dragover');
         }
 
-        async function uploadFile(file) {
+        async function uploadFiles(files) {
             const formData = new FormData();
-            formData.append('file', file);
+            for (const file of files) {
+                formData.append('files', file);
+            }
             
             // Show loading state for upload
             const uploadArea = document.querySelector('.upload-area');
             const originalContent = uploadArea.innerHTML;
             uploadArea.innerHTML = `
                 <div class="upload-icon">⏳</div>
-                <p style="margin-top: 10px; color: var(--accent-color); font-weight: 500;">Uploading ${file.name}...</p>
+                <p style="margin-top: 10px; color: var(--accent-color); font-weight: 500;">Uploading ${files.length} file(s)...</p>
                 <p style="color: var(--text-secondary); font-size: 14px;">Please wait</p>
             `;
             uploadArea.style.cursor = 'not-allowed';
@@ -1968,50 +1983,55 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    currentData = data.data_content; // Fix: use data_content instead of content
-                    displayDataPreview(data.data_content, data.headers, file.name);
+                    currentData = data.files; // Expecting a list of file data
+                    displayFilesPreview(currentData);
                     document.getElementById('analyzeBtn').disabled = false;
-                    showAlert(`File "${file.name}" uploaded successfully!`, 'success');
+                    showAlert(`${files.length} file(s) uploaded successfully!`, 'success');
                     saveSession();
-                    // Restore upload area after successful upload
-                    uploadArea.innerHTML = originalContent;
-                    uploadArea.style.cursor = 'pointer';
-                    uploadArea.classList.remove('uploading');
                 } else {
                     showAlert(`Upload failed: ${data.error}`, 'error');
-                    // Restore original upload area
-                    uploadArea.innerHTML = originalContent;
-                    uploadArea.style.cursor = 'pointer';
-                    uploadArea.classList.remove('uploading');
                 }
             } catch (error) {
                 showAlert(`Upload error: ${error.message}`, 'error');
-                // Restore original upload area
+            } finally {
+                // Restore upload area
                 uploadArea.innerHTML = originalContent;
                 uploadArea.style.cursor = 'pointer';
                 uploadArea.classList.remove('uploading');
             }
         }
 
-        function displayDataPreview(content, headers, filename) {
+        function displayFilesPreview(files) {
             const preview = document.getElementById('filePreview');
-            const fileSize = content.length;
-            const lines = content.split('\n').length;
+            let totalSize = 0;
+            let fileSummariesHTML = '';
+
+            files.forEach(file => {
+                totalSize += file.data_content.length;
+                fileSummariesHTML += `
+                    <div class="file-info">
+                        <div class="file-icon">📄</div>
+                        <div class="file-details">
+                            <h4>${file.filename}</h4>
+                            <p>${file.data_content.length.toLocaleString()} characters</p>
+                        </div>
+                    </div>
+                `;
+            });
             
             preview.innerHTML = `
                 <div class="upload-success">
                     <div class="file-info">
-                        <div class="file-icon">📄</div>
+                        <div class="file-icon">🗂️</div>
                         <div class="file-details">
-                            <h4>${filename}</h4>
-                            <p>${fileSize.toLocaleString()} characters • ${lines} lines</p>
-                            ${headers ? `<p><strong>Columns:</strong> ${headers.join(', ')}</p>` : ''}
+                            <h4>${files.length} Files Uploaded</h4>
+                            <p>Total size: ${totalSize.toLocaleString()} characters</p>
                         </div>
-                        <button class="btn-secondary" onclick="clearUpload()" style="padding: 8px 12px; font-size: 14px;">🗑️ Clear</button>
+                        <button class="btn-secondary" onclick="clearUpload()" style="padding: 8px 12px; font-size: 14px;">🗑️ Clear All</button>
                     </div>
-                    <div class="data-preview">
-                        <strong>Data Preview:</strong><br>
-                        ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}
+                    <div class="data-preview" style="max-height: 200px; overflow-y: auto;">
+                        <strong>Uploaded Files:</strong><br>
+                        ${fileSummariesHTML}
                     </div>
                 </div>
             `;
@@ -2019,12 +2039,12 @@
         }
         
         function clearUpload() {
-            currentData = null;
+            currentData = [];
             document.getElementById('filePreview').style.display = 'none';
             document.getElementById('analyzeBtn').disabled = true;
             document.getElementById('fileInput').value = '';
             saveSession();
-            showAlert('File cleared', 'warning');
+            showAlert('Files cleared', 'warning');
         }
 
         async function testAPI() {
@@ -2075,8 +2095,8 @@
                 return;
             }
             
-            if (!currentData) {
-                showAlert('Please upload a file first', 'error');
+            if (!currentData || currentData.length === 0) {
+                showAlert('Please upload one or more files first', 'error');
                 return;
             }
             
@@ -2090,7 +2110,8 @@
             const temperature = parseFloat(document.getElementById('temperature').value);
             const maxTokens = parseInt(document.getElementById('maxTokens').value);
             const englishOutput = document.getElementById('englishOutput').checked;
-            
+            const analysisMode = document.querySelector('input[name="analysisMode"]:checked').value;
+
             showLoading('Analyzing Data...', 'Processing your qualitative data with AI...');
             
             // Simulate progress updates
@@ -2109,14 +2130,15 @@
                         api_key: apiKey,
                         provider: provider,
                         model: model,
-                        data_content: currentData,
+                        files_data: currentData, // Changed from data_content
                         data_type: dataType,
                         num_themes: numThemes,
                         custom_prompt: customPrompt,
                         enable_role_playing: enableRolePlaying,
                         temperature: temperature,
                         max_tokens: maxTokens,
-                        english_output: englishOutput
+                        english_output: englishOutput,
+                        analysis_mode: analysisMode // Added analysis mode
                     })
                 });
                 
@@ -2126,13 +2148,19 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    analysisResponse = data.response;
+                    analysisResponse = data.response; // Store raw response
                     document.getElementById('resultsSection').style.display = 'block';
                     showAlert('Analysis completed successfully', 'success');
-                    document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
                     
-                    // Parse and display the table
-                    parseAndDisplayResults(data.response);
+                    if (data.report_type === 'separate') {
+                        displaySeparateReports(data.response);
+                    } else {
+                        parseAndDisplayResults(data.response);
+                    }
+                    // Scroll after the content has been rendered
+                    requestAnimationFrame(() => {
+                        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+                    });
                 } else {
                     showAlert(`Analysis failed: ${data.error}`, 'error');
                 }
@@ -2144,93 +2172,122 @@
             }
         }
 
-        function parseResponseToTable(responseText) {
-            /*
-             * Robustly convert the raw model response into a structured JS array.
-             * 1. Locate text between the ********** delimiters.
-             * 2. Remove the header and any separator lines.
-             * 3. Detect the start of a new row whenever a line begins with a pipe
-             *    and (heuristically) contains at least four cells.
-             * 4. Merge continuation lines (quotes that overflow) into the current row.
-             * 5. Split & clean the four final cells and push to tableData.
-             */
-            try {
-                const ROW_START = /^\|.*\|/;            // line that starts & ends with a pipe
-                const HEADER_SEP = /^(\|?\s*-{3,}\s*)+$/; // |---|---|---|---|
+        function displaySeparateReports(reports) {
+            const resultsSection = document.getElementById('resultsSection');
+            const mainTableView = document.getElementById('tableView');
+            const rawView = document.getElementById('rawView');
+            const mainChartsSection = document.getElementById('chartsSection');
+            const mainSummary = document.getElementById('resultsSummary');
+            const mainResultsHeader = resultsSection.querySelector('.results-header h2');
+            const mainExportButtons = document.getElementById('mainExportButtons');
 
-                /* ---------- helper functions ---------- */
-                const isDelimiter = line => line === '**********';
-                const stripPipes = cell => cell.replace(/^['"`\s]+|['"`\s]+$/g, '').trim();
+            // Hide sections meant for a single, combined report
+            mainTableView.style.display = 'none';
+            mainChartsSection.style.display = 'none';
+            mainSummary.style.display = 'none';
+            mainExportButtons.style.display = 'none';
+            mainResultsHeader.innerHTML = '<i class="fas fa-copy"></i> Separate Analysis Reports';
 
-                function splitRowIntoCells(raw) {
-                    // naive split first
-                    let cells = raw.split('|');
-                    // drop empty caused by leading/trailing pipe
-                    if (cells[0].trim() === '') cells.shift();
-                    if (cells.length && cells[cells.length - 1].trim() === '') cells.pop();
+            rawView.innerHTML = '';
+            rawView.style.display = 'block';
 
-                    // if stray pipes produced >4 cells, merge extras into Quotes (index 2)
-                    if (cells.length > 4) {
-                        const extras = cells.splice(2, cells.length - 3);
-                        cells[2] = extras.join('|');
+            reports.forEach((report, index) => {
+                const baseId = `report-${index}`;
+                const tableData = parseResponseToTable(report.analysis);
+                const reportCard = createReportCard(baseId, report.filename, tableData, report.analysis);
+                rawView.appendChild(reportCard);
+
+                // Defer the execution to ensure the DOM is updated
+                requestAnimationFrame(() => {
+                    if (tableData && tableData.length > 0) {
+                        // Populate the new report card with data and charts
+                        updateSummaryCards(tableData, `${baseId}-totalThemes`, `${baseId}-totalParticipants`, `${baseId}-totalQuotes`);
+                        createCharts(tableData, `${baseId}-themeChart`, `${baseId}-participantChart`);
+                        displayResultsTable(tableData, `${baseId}-tableBody`, `${baseId}-tableInfo`);
+                        addEventListenersForReport(baseId, tableData, report.analysis);
                     }
-                    return cells.slice(0, 4).map(stripPipes); // ensure exactly 4
-                }
-
-                /* ---------- main logic ---------- */
-                const lines = responseText.split(/\r?\n/).map(l => l.trim());
-
-                // 1. Locate table boundaries
-                const delimIdx = lines.reduce((acc, line, idx) => {
-                    if (isDelimiter(line)) acc.push(idx);
-                    return acc;
-                }, []);
-                if (delimIdx.length < 2) return null;
-
-                let tableLines = lines.slice(delimIdx[0] + 1, delimIdx[delimIdx.length - 1]);
-
-                // 2. Remove header + separator
-                if (tableLines.length && /theme/i.test(tableLines[0])) tableLines.shift();
-                if (tableLines.length && HEADER_SEP.test(tableLines[0])) tableLines.shift();
-
-                // 3. Build logical rows
-                const rawRows = [];
-                let current = '';
-
-                const pushCurrent = () => {
-                    if (current.trim()) {
-                        rawRows.push(current.trim());
-                        current = '';
-                    }
-                };
-
-                tableLines.forEach(line => {
-                    if (!line || HEADER_SEP.test(line)) return; // skip blank/separator
-
-                    if (ROW_START.test(line) && current) {
-                        // new row begins – commit previous
-                        pushCurrent();
-                    }
-                    // append (space keeps words separate)
-                    current += (current ? ' ' : '') + line;
                 });
-                pushCurrent(); // commit last row
+            });
+        }
+        
+        function createReportCard(baseId, filename, tableData, rawAnalysisText) {
+            const reportContainer = document.createElement('div');
+            reportContainer.className = 'section separate-report-container';
+            reportContainer.id = baseId;
 
-                // 4. Parse each raw row into cells
-                const tableData = rawRows.reduce((acc, raw) => {
-                    if (!raw.includes('|')) return acc;
-                    const cells = splitRowIntoCells(raw);
-                    if (cells.length !== 4) return acc;
-                    const [theme, description, quotes, count] = cells;
-                    acc.push({ theme, description, quotes, participantCount: count });
-                    return acc;
-                }, []);
-
-                return tableData.length ? tableData : null;
-            } catch (err) {
-                console.error('parseResponseToTable error', err);
-                return null;
+            if (tableData && tableData.length > 0) {
+                reportContainer.innerHTML = `
+                    <div class="results-header" style="padding-bottom: 20px;">
+                        <h3><i class="fas fa-file-alt"></i> Report for: ${escapeHtml(filename)}</h3>
+                    </div>
+                    <div class="results-summary" id="${baseId}-summary">
+                        <div class="summary-card"><i class="fas fa-tags"></i><div><span class="summary-number" id="${baseId}-totalThemes">0</span><span class="summary-label">Themes</span></div></div>
+                        <div class="summary-card"><i class="fas fa-users"></i><div><span class="summary-number" id="${baseId}-totalParticipants">0</span><span class="summary-label">Participants</span></div></div>
+                        <div class="summary-card"><i class="fas fa-quote-left"></i><div><span class="summary-number" id="${baseId}-totalQuotes">0</span><span class="summary-label">Quotes</span></div></div>
+                    </div>
+                    <div id="${baseId}-chartsSection" class="charts-container" style="margin-top: 20px;">
+                        <div class="chart-card"><div class="chart-title">Theme Distribution</div><canvas id="${baseId}-themeChart"></canvas></div>
+                        <div class="chart-card"><div class="chart-title">Participant Count by Theme</div><canvas id="${baseId}-participantChart"></canvas></div>
+                    </div>
+                    <div id="${baseId}-tableView" class="results-table-container" style="margin-top: 20px;">
+                        <div class="table-controls">
+                            <div class="search-container"><i class="fas fa-search search-icon"></i><input type="text" id="${baseId}-searchBox" class="search-box" placeholder="Search report..."></div>
+                            <div class="table-info"><span id="${baseId}-tableInfo">Found 0 themes</span></div>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table class="results-table">
+                                <thead><tr>
+                                    <th class="sortable" data-column-index="0">Theme</th>
+                                    <th class="sortable" data-column-index="1">Description</th>
+                                    <th class="sortable" data-column-index="2">Quotes</th>
+                                    <th class="sortable" data-column-index="3">Participants</th>
+                                </tr></thead>
+                                <tbody id="${baseId}-tableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="export-buttons">
+                        <button class="export-btn export-csv"><i class="fas fa-file-csv"></i> Export CSV</button>
+                        <button class="export-btn secondary export-txt"><i class="fas fa-file-alt"></i> Save as Text</button>
+                        <button class="export-btn print export-print"><i class="fas fa-print"></i> Print Table</button>
+                    </div>`;
+            } else {
+                reportContainer.innerHTML = `
+                    <div class="results-header"><h3><i class="fas fa-file-alt"></i> Report for: ${escapeHtml(filename)}</h3></div>
+                    <div class="raw-view" style="display: block; white-space: pre-wrap; padding: 15px; margin-top: 10px; border-radius: 8px;">${escapeHtml(rawAnalysisText || '(No content to display)')}</div>`;
             }
+            return reportContainer;
+        }
+
+        function addEventListenersForReport(baseId, tableData, rawAnalysisText) {
+            const reportContainer = document.getElementById(baseId);
+            if (!reportContainer) return;
+
+            const tableBody = reportContainer.querySelector(`#${baseId}-tableBody`);
+            const headers = reportContainer.querySelectorAll('.sortable');
+            const searchBox = reportContainer.querySelector(`#${baseId}-searchBox`);
+
+            // Sort table
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const sortAsc = !header.classList.contains('sort-asc');
+                    headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+                    header.classList.toggle('sort-asc', sortAsc);
+                    header.classList.toggle('sort-desc', !sortAsc);
+                    const sortedData = sortTable(header.dataset.columnIndex, sortAsc, tableData);
+                    displayResultsTable(sortedData, tableBody.id, null);
+                });
+            });
+
+            // Filter table
+            searchBox.addEventListener('input', () => {
+                filterTable(searchBox.value, tableBody, tableData, reportContainer.querySelector(`#${baseId}-tableInfo`));
+            });
+
+            // Export buttons
+            reportContainer.querySelector('.export-csv').addEventListener('click', () => exportCSV(tableData));
+            reportContainer.querySelector('.export-txt').addEventListener('click', () => saveAsText(tableData, rawAnalysisText));
+            reportContainer.querySelector('.export-print').addEventListener('click', () => printTable(tableData));
         }
 
         function parseAndDisplayResults(responseText) {
@@ -2238,15 +2295,23 @@
             const tableView = document.getElementById('tableView');
             const rawView = document.getElementById('rawView');
             const viewToggle = document.getElementById('viewToggle');
+            const chartsSection = document.getElementById('chartsSection');
+            const summarySection = document.getElementById('resultsSummary');
+            const mainExportButtons = document.getElementById('mainExportButtons');
             
-            if (parsedTableData && parsedTableData.length > 0) {
-                tableData = parsedTableData;
-                displayResultsTable(parsedTableData);
-                updateSummaryCards(parsedTableData);
-                createCharts(parsedTableData);
+            // Ensure the correct sections are visible for a combined report
+            tableView.style.display = 'block';
+            chartsSection.style.display = 'block';
+            summarySection.style.display = 'grid'; 
+            rawView.style.display = 'none';
+            mainExportButtons.style.display = 'flex';
 
-                tableView.style.display = 'block';
-                rawView.style.display = 'none';
+            if (parsedTableData && parsedTableData.length > 0) {
+                tableData = parsedTableData; // Store globally for combined report
+                displayResultsTable(tableData, 'resultsTableBody', 'tableInfo');
+                updateSummaryCards(tableData, 'totalThemes', 'totalParticipants', 'totalQuotes');
+                createCharts(tableData, 'themeChart', 'participantChart');
+
                 viewToggle.innerHTML = '<i class="fas fa-file-alt"></i> Show Raw Text';
             } else {
                 rawView.textContent = responseText;
@@ -2256,19 +2321,19 @@
             }
         }
 
-        function updateSummaryCards(tableData) {
+        function updateSummaryCards(tableData, totalThemesId, totalParticipantsId, totalQuotesId) {
             const totalThemes = tableData.length;
             const totalParticipants = tableData.reduce((sum, row) => sum + (parseInt(row.participantCount) || 0), 0);
             const totalQuotes = tableData.filter(row => row.quotes && row.quotes.trim().length > 0).length;
             
-            // Animate the numbers
-            animateNumber('totalThemes', totalThemes);
-            animateNumber('totalParticipants', totalParticipants);
-            animateNumber('totalQuotes', totalQuotes);
+            animateNumber(totalThemesId, totalThemes);
+            animateNumber(totalParticipantsId, totalParticipants);
+            animateNumber(totalQuotesId, totalQuotes);
         }
 
         function animateNumber(elementId, targetValue) {
             const element = document.getElementById(elementId);
+            if (!element) return; // Add a guard clause
             const startValue = 0;
             const duration = 1000;
             const startTime = performance.now();
@@ -2291,44 +2356,38 @@
             requestAnimationFrame(updateNumber);
         }
 
-        function displayResultsTable(tableData) {
-            const tableBody = document.getElementById('resultsTableBody');
-            const tableInfo = document.getElementById('tableInfo');
-            
+        function displayResultsTable(tableData, tableBodyId, tableInfoId) {
+            const tableBody = document.getElementById(tableBodyId);
+            if (!tableBody) return;
+
             tableBody.innerHTML = '';
             
             tableData.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 
-                // Enhanced theme cell with better formatting
                 const themeCell = `<td class="theme-cell" title="Theme ${index + 1}">${escapeHtml(row.theme)}</td>`;
-                
-                // Enhanced description cell with truncation and tooltip
                 const description = escapeHtml(row.description);
                 const truncatedDescription = description.length > 200 ? description.substring(0, 200) + '...' : description;
                 const descriptionCell = `<td class="description-cell" title="${description}">${truncatedDescription}</td>`;
                 
-                // Enhanced quotes cell with better formatting
                 const quotes = escapeHtml(row.quotes);
                 const truncatedQuotes = quotes.length > 300 ? quotes.substring(0, 300) + '...' : quotes;
                 const quotesCell = `<td class="quotes-cell" title="${quotes}">"${truncatedQuotes}"</td>`;
                 
-                // Enhanced participant count with better styling
                 const participantCount = parseInt(row.participantCount) || 0;
                 const participantCell = `<td><span class="participant-count" title="${participantCount} participants">${participantCount}</span></td>`;
                 
                 tr.innerHTML = themeCell + descriptionCell + quotesCell + participantCell;
                 
-                // Add click event for row expansion
-                tr.addEventListener('click', function() {
-                    showRowDetails(row, index + 1);
-                });
-                
+                tr.addEventListener('click', () => showRowDetails(row, index + 1));
                 tr.style.cursor = 'pointer';
                 tableBody.appendChild(tr);
             });
             
-            tableInfo.textContent = `Found ${tableData.length} themes`;
+            if (tableInfoId) {
+                const tableInfo = document.getElementById(tableInfoId);
+                if (tableInfo) tableInfo.textContent = `Found ${tableData.length} themes`;
+            }
         }
 
         // Helper function to escape HTML
@@ -2381,81 +2440,38 @@
             }
         }
 
-        function filterTable() {
-            const searchBox = document.getElementById('searchBox');
-            const tableBody = document.getElementById('resultsTableBody');
-            const rows = tableBody.getElementsByTagName('tr');
-            const searchValue = searchBox.value.toLowerCase();
-            
-            let visibleCount = 0;
-            
-            for (let row of rows) {
-                const text = row.textContent.toLowerCase();
-                if (text.includes(searchValue)) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
+        function filterTable(searchValue, tableBody, tableData, tableInfoElement) {
+            const filteredData = tableData.filter(row => {
+                return Object.values(row).some(val => 
+                    String(val).toLowerCase().includes(searchValue.toLowerCase())
+                );
+            });
+            displayResultsTable(filteredData, tableBody.id, null);
+            if (tableInfoElement) {
+                tableInfoElement.textContent = `Found ${filteredData.length} themes`;
             }
-            
-            document.getElementById('tableInfo').textContent = `Found ${visibleCount} themes`;
         }
 
-        function sortTable(columnIndex) {
-            if (!tableData) return;
-            
-            const tableBody = document.getElementById('resultsTableBody');
-            const headers = document.querySelectorAll('.results-table th');
-            
-            // Remove existing sort classes
-            headers.forEach(header => {
-                header.classList.remove('sort-asc', 'sort-desc');
-            });
-            
-            // Add sort class to clicked header
-            const clickedHeader = headers[columnIndex];
-            const currentSort = clickedHeader.classList.contains('sort-asc') ? 'asc' : 'desc';
-            
-            // Sort the data
-            tableData.sort((a, b) => {
-                let aVal, bVal;
-                
-                switch (columnIndex) {
-                    case 0: // Theme
-                        aVal = a.theme.toLowerCase();
-                        bVal = b.theme.toLowerCase();
-                        break;
-                    case 1: // Description
-                        aVal = a.description.toLowerCase();
-                        bVal = b.description.toLowerCase();
-                        break;
-                    case 2: // Quotes
-                        aVal = a.quotes.toLowerCase();
-                        bVal = b.quotes.toLowerCase();
-                        break;
-                    case 3: // Participants
-                        aVal = parseInt(a.participantCount) || 0;
-                        bVal = parseInt(b.participantCount) || 0;
-                        break;
-                    default:
-                        return 0;
+        function sortTable(columnIndex, sortAsc, tableData) {
+            const keyMap = ['theme', 'description', 'quotes', 'participantCount'];
+            const key = keyMap[columnIndex];
+
+            return [...tableData].sort((a, b) => {
+                let aVal = a[key];
+                let bVal = b[key];
+
+                if (key === 'participantCount') {
+                    aVal = parseInt(aVal) || 0;
+                    bVal = parseInt(bVal) || 0;
+                } else {
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
                 }
                 
-                if (aVal < bVal) return currentSort === 'asc' ? -1 : 1;
-                if (aVal > bVal) return currentSort === 'asc' ? 1 : -1;
+                if (aVal < bVal) return sortAsc ? -1 : 1;
+                if (aVal > bVal) return sortAsc ? 1 : -1;
                 return 0;
             });
-            
-            // Update sort indicator
-            if (currentSort === 'asc') {
-                clickedHeader.classList.add('sort-desc');
-            } else {
-                clickedHeader.classList.add('sort-asc');
-            }
-            
-            // Redisplay table
-            displayResultsTable(tableData);
         }
 
         function toggleView() {
@@ -2492,76 +2508,66 @@
             return csvRows.join('\n');
         }
         
-        async function exportCSV() {
+        async function exportCSV(tableData) {
             if (!tableData || tableData.length === 0) {
                 showAlert('No analysis results to export', 'error');
                 return;
             }
             
             try {
-                // Create CSV content from table data
                 const csvContent = createCSVContent(tableData);
-                
-                // Create and download the CSV file
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.csv`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-                
                 showAlert('CSV exported successfully!', 'success');
             } catch (error) {
                 showAlert(`Export failed: ${error.message}`, 'error');
             }
         }
         
-        function saveAsText() {
-            if (!analysisResponse) {
+        function saveAsText(tableData, rawAnalysisText) {
+            if (!rawAnalysisText && (!tableData || tableData.length === 0)) {
                 showAlert('No analysis results to save', 'error');
                 return;
             }
             
-            try {
-                // Create text content - use the raw response
-                let textContent = analysisResponse;
-                
-                // If we have table data, also add a formatted summary
-                if (tableData && tableData.length > 0) {
-                    textContent += '\n\n' + '='.repeat(60) + '\n';
-                    textContent += 'FORMATTED SUMMARY:\n';
-                    textContent += '='.repeat(60) + '\n\n';
-                    
-                    tableData.forEach((row, index) => {
-                        textContent += `THEME ${index + 1}: ${row.theme}\n`;
-                        textContent += `Description: ${row.description}\n`;
-                        textContent += `Quotes: ${row.quotes}\n`;
-                        textContent += `Participants: ${row.participantCount}\n`;
-                        textContent += '\n' + '-'.repeat(40) + '\n\n';
-                    });
+            let textContent = rawAnalysisText || '';
+            
+            if (tableData && tableData.length > 0) {
+                if (rawAnalysisText) {
+                    textContent += '\n\n' + '='.repeat(60) + '\n' + 'FORMATTED SUMMARY:\n' + '='.repeat(60) + '\n\n';
                 }
-                
-                // Create and download the text file
+                tableData.forEach((row, index) => {
+                    textContent += `THEME ${index + 1}: ${row.theme}\n`;
+                    textContent += `Description: ${row.description}\n`;
+                    textContent += `Quotes: ${row.quotes}\n`;
+                    textContent += `Participants: ${row.participantCount}\n\n` + '-'.repeat(40) + '\n\n';
+                });
+            }
+            
+            try {
                 const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8;' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `qualigpt_analysis_${new Date().toISOString().slice(0,10)}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-                
                 showAlert('Text file saved successfully!', 'success');
             } catch (error) {
                 showAlert(`Save failed: ${error.message}`, 'error');
             }
         }
 
-        function printTable() {
+        function printTable(tableData) {
             if (!tableData || tableData.length === 0) {
                 showAlert('No table data to print', 'error');
                 return;
@@ -2628,6 +2634,41 @@
         // Auto-save on form changes
         document.addEventListener('input', saveSession);
         document.addEventListener('change', saveSession);
+
+        // Add event listeners for combined report interactivity
+        document.addEventListener('DOMContentLoaded', () => {
+            const combinedTableHeaders = document.querySelectorAll('#resultsTable .sortable');
+            combinedTableHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    if (!tableData) return;
+                    const sortAsc = !header.classList.contains('sort-asc');
+                    combinedTableHeaders.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+                    header.classList.toggle('sort-asc', sortAsc);
+                    header.classList.toggle('sort-desc', !sortAsc);
+                    const sortedData = sortTable(header.dataset.columnIndex, sortAsc, tableData);
+                    displayResultsTable(sortedData, 'resultsTableBody', 'tableInfo');
+                });
+            });
+
+            const searchBox = document.getElementById('searchBox');
+            if(searchBox) {
+                searchBox.addEventListener('input', () => {
+                    if(tableData) filterTable(searchBox.value, document.getElementById('resultsTableBody'), tableData, document.getElementById('tableInfo'));
+                });
+            }
+
+            const mainExportButtons = document.getElementById('mainExportButtons');
+            if (mainExportButtons) {
+                mainExportButtons.querySelector('.export-csv').addEventListener('click', () => exportCSV(tableData));
+                mainExportButtons.querySelector('.export-txt').addEventListener('click', () => saveAsText(tableData, analysisResponse));
+                mainExportButtons.querySelector('.export-print').addEventListener('click', () => printTable(tableData));
+            }
+            
+            const viewToggle = document.getElementById('viewToggle');
+            if(viewToggle) {
+                viewToggle.addEventListener('click', toggleView);
+            }
+        });
     </script>
 </body>
 </html>

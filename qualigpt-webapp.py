@@ -131,68 +131,65 @@ def test_api():
 @app.route('/upload_file', methods=['POST'])
 def upload_file():
     try:
-        if 'file' not in request.files:
-            return jsonify({'success': False, 'error': 'No file uploaded'})
+        if 'files' not in request.files:
+            return jsonify({'success': False, 'error': 'No files uploaded'})
         
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({'success': False, 'error': 'No file selected'})
+        files = request.files.getlist('files')
+        if not files or all(f.filename == '' for f in files):
+            return jsonify({'success': False, 'error': 'No files selected'})
         
-        if not allowed_file(file.filename):
-            return jsonify({'success': False, 'error': 'Invalid file type'})
-        
-        # Process the file based on its type
-        filename = secure_filename(file.filename)
-        file_ext = filename.rsplit('.', 1)[1].lower()
-        
-        if file_ext == 'csv':
-            data = pd.read_csv(file)
-        elif file_ext == 'xlsx':
-            data = pd.read_excel(file)
-        elif file_ext == 'docx':
-            # Extract text from DOCX, including tables as many interview/focus-group transcripts are stored there
-            def _extract_text_from_docx(file_obj):
-                """Return a list of non-empty text lines from a DOCX file, looking at paragraphs *and* table cells."""
-                doc = Document(file_obj)
-                lines: list[str] = []
+        processed_files = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                filename = secure_filename(file.filename)
+                file_ext = filename.rsplit('.', 1)[1].lower()
+                
+                if file_ext == 'csv':
+                    data = pd.read_csv(file)
+                elif file_ext == 'xlsx':
+                    data = pd.read_excel(file)
+                elif file_ext == 'docx':
+                    def _extract_text_from_docx(file_obj):
+                        """Return a list of non-empty text lines from a DOCX file, looking at paragraphs *and* table cells."""
+                        doc = Document(file_obj)
+                        lines: list[str] = []
 
-                # Paragraphs
-                for para in doc.paragraphs:
-                    text = para.text.strip()
-                    if text:
-                        lines.append(text)
+                        for para in doc.paragraphs:
+                            text = para.text.strip()
+                            if text:
+                                lines.append(text)
 
-                # Tables
-                for table in doc.tables:
-                    for row in table.rows:
-                        for cell in row.cells:
-                            cell_text = cell.text.strip()
-                            if cell_text:
-                                # Split on hard line-breaks within the cell to mimic line-by-line behaviour
-                                for piece in cell_text.split("\n"):
-                                    piece = piece.strip()
-                                    if piece:
-                                        lines.append(piece)
+                        for table in doc.tables:
+                            for row in table.rows:
+                                for cell in row.cells:
+                                    cell_text = cell.text.strip()
+                                    if cell_text:
+                                        for piece in cell_text.split("\n"):
+                                            piece = piece.strip()
+                                            if piece:
+                                                lines.append(piece)
+                        return lines
 
-                return lines
+                    full_text = _extract_text_from_docx(file)
+                    if not full_text:
+                        full_text = ["(No readable text detected in DOCX)"]
+                    data = pd.DataFrame(full_text, columns=['Content'])
+                
+                headers = list(data.columns)
+                data_content = '\n'.join(data.apply(lambda row: ' '.join(row.astype(str)), axis=1))
+                
+                processed_files.append({
+                    'filename': filename,
+                    'headers': headers,
+                    'data_content': data_content
+                })
 
-            full_text = _extract_text_from_docx(file)
+        if not processed_files:
+            return jsonify({'success': False, 'error': 'Invalid file types or empty files'})
 
-            # Fallback if nothing extracted – avoids empty DataFrame that breaks downstream steps
-            if not full_text:
-                full_text = ["(No readable text detected in DOCX)"]
-
-            data = pd.DataFrame(full_text, columns=['Content'])
-        
-        # Convert data to string format
-        headers = list(data.columns)
-        data_content = '\n'.join(data.apply(lambda row: ' '.join(row.astype(str)), axis=1))
-        
         return jsonify({
             'success': True,
-            'headers': headers,
-            'data_content': data_content,
-            'preview': data_content[:1000] + '...' if len(data_content) > 1000 else data_content
+            'files': processed_files
         })
     
     except Exception as e:
@@ -204,76 +201,34 @@ def analyze():
         data = request.json
         api_key = data.get('api_key')
         provider_name = data.get('provider', 'openai')
-        model_name = data.get('model')  # Get the specific model
-        data_content = data.get('data_content')
+        model_name = data.get('model')
+        
+        # Handle single file vs multiple files
+        files_data = data.get('files_data')
+        analysis_mode = data.get('analysis_mode', 'combined')
+
         data_type = data.get('data_type')
         num_themes = data.get('num_themes', 10)
         custom_prompt = data.get('custom_prompt', '')
         enable_role_playing = data.get('enable_role_playing', False)
-        pre_detect_themes = data.get('pre_detect_themes', False)  # NEW optional flow
-        temperature = data.get('temperature', 0.7)  # Get temperature setting
-        max_tokens = data.get('max_tokens', 4000)   # Get max tokens setting
-        
-        # NEW: optional flag to force English output and grammar correction
+        pre_detect_themes = data.get('pre_detect_themes', False)
+        temperature = data.get('temperature', 0.7)
+        max_tokens = data.get('max_tokens', 4000)
         english_output = data.get('english_output', False)
-        
-        if not api_key or not data_content:
-            return jsonify({'success': False, 'error': 'API key and data content are required'})
-        
-        # Create provider with API key
-        provider = get_provider(provider_name, api_key)
-        
-        # Instruct the model to keep output language consistent with the input (e.g., Vietnamese source ➜ Vietnamese output)
-        vietnamese_instruction = (
-            " Nếu dữ liệu nguồn có vẻ được viết bằng tiếng Việt, hãy trình bày toàn bộ bảng (bao gồm tiêu đề cột, mô tả, trích dẫn) bằng tiếng Việt."  # noqa: E501
-        )
 
+        if not api_key or not files_data:
+            return jsonify({'success': False, 'error': 'API key and data content are required'})
+
+        provider = get_provider(provider_name, api_key)
+
+        vietnamese_instruction = (
+            " Nếu dữ liệu nguồn có vẻ được viết bằng tiếng Việt, hãy trình bày toàn bộ bảng (bao gồm tiêu đề cột, mô tả, trích dẫn) bằng tiếng Việt."
+        )
         english_instruction = (
             " Present the entire table in English, with correct grammar and spelling, translating and grammar-correcting any participant quotes as needed."
         )
-
-        # Choose language-specific instruction
         language_instruction = english_instruction if english_output else vietnamese_instruction
 
-        # Prepare the base prompt (may be updated later if we pre-detect themes)
-        if custom_prompt:
-            prompt = custom_prompt
-        else:
-            prompt = PROMPTS.get(data_type, PROMPTS['Interview']).format(num_themes=num_themes)
-
-        # Optional pre-detection of themes: makes a quick first pass to list key themes, then we reuse them
-        detected_themes: list[str] | None = None
-        if pre_detect_themes:
-            detect_prompt = (
-                f"Identify the {num_themes} most significant themes discussed in the dataset. "
-                "Output ONLY the theme names, each on its own line, with NO numbering, bullets, or extra commentary."
-            )
-
-            # One-shot call on the entire data (not split) to minimise latency
-            try:
-                themes_response = provider.chat(
-                    system_message if 'system_message' in locals() else "You are a helpful assistant.",
-                    data_content + "\n\n" + detect_prompt,
-                    model=model_name or "auto",
-                    temperature=temperature,
-                    max_tokens=512,
-                )
-
-                raw_lines = themes_response.strip().splitlines()
-                cleaned = [re.sub(r"^[\s\-–•*\d\.]+", "", ln).strip() for ln in raw_lines if ln.strip()]
-                detected_themes = [t for t in cleaned if t]
-            except Exception as _e:
-                detected_themes = None  # fail gracefully – continue with normal prompt
-
-            if detected_themes:
-                # Constrain the main prompt to these themes and clarify behaviour when quotes are missing
-                joined_themes = ", ".join([f'\"{t}\"' for t in detected_themes])
-                prompt += (
-                    "\n\nONLY include the following themes in your table: " + joined_themes + ". "
-                    "If a theme has no supporting quotations, leave the 'Quotes' cell empty or omit that theme entirely."
-                )
-
-        # Add role playing if enabled
         if enable_role_playing:
             system_message = (
                 "You are an excellent qualitative data analyst and qualitative research expert. "
@@ -283,45 +238,85 @@ def analyze():
             system_message = (
                 "You are a helpful assistant. Follow the output format instructions exactly with no additional commentary." + language_instruction
             )
-        
-        # Split data into segments if it's too large
-        segments = split_into_segments(data_content)
-        all_responses = []
-        
-        for i, segment in enumerate(segments):
-            combined_message = segment + "\n\n" + prompt
+
+        def _run_single_analysis(content):
+            if custom_prompt:
+                prompt = custom_prompt
+            else:
+                prompt = PROMPTS.get(data_type, PROMPTS['Interview']).format(num_themes=num_themes)
+
+            detected_themes: list[str] | None = None
+            if pre_detect_themes:
+                detect_prompt = (
+                    f"Identify the {num_themes} most significant themes discussed in the dataset. "
+                    "Output ONLY the theme names, each on its own line, with NO numbering, bullets, or extra commentary."
+                )
+                try:
+                    themes_response = provider.chat(
+                        system_message,
+                        content + "\n\n" + detect_prompt,
+                        model=model_name or "auto",
+                        temperature=temperature,
+                        max_tokens=512,
+                    )
+                    raw_lines = themes_response.strip().splitlines()
+                    cleaned = [re.sub(r"^[\s\-–•*\d\.]+", "", ln).strip() for ln in raw_lines if ln.strip()]
+                    detected_themes = [t for t in cleaned if t]
+                except Exception as _e:
+                    detected_themes = None
+
+                if detected_themes:
+                    joined_themes = ", ".join([f'\"{t}\"' for t in detected_themes])
+                    prompt += (
+                        "\n\nONLY include the following themes in your table: " + joined_themes + ". "
+                        "If a theme has no supporting quotations, leave the 'Quotes' cell empty or omit that theme entirely."
+                    )
+
+            segments = split_into_segments(content)
+            all_responses = []
+            for segment in segments:
+                combined_message = segment + "\n\n" + prompt
+                response_text = provider.chat(
+                    system_message,
+                    combined_message,
+                    model=model_name or "auto",
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                all_responses.append(response_text)
+
+            if len(segments) > 1:
+                merged_responses = "\n".join(all_responses)
+                return analyze_merged_responses(
+                    merged_responses, num_themes, system_message, provider, model_name, temperature, max_tokens
+                )
+            else:
+                return all_responses[0]
+
+        if analysis_mode == 'combined':
+            combined_content = "\n\n".join([f['data_content'] for f in files_data])
+            final_response = _run_single_analysis(combined_content)
+            return jsonify({
+                'success': True,
+                'response': final_response,
+                'report_type': 'combined',
+                'segments_processed': len(split_into_segments(combined_content))
+            })
+        else: # separate reports
+            separate_results = []
+            for file_data in files_data:
+                analysis_result = _run_single_analysis(file_data['data_content'])
+                separate_results.append({
+                    'filename': file_data['filename'],
+                    'analysis': analysis_result
+                })
             
-            # Use the selected model and settings
-            response_text = provider.chat(
-                system_message,
-                combined_message,
-                model=model_name or "auto",  # Use selected model or default
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-            all_responses.append(response_text)
-        
-        # If multiple segments, merge and re-analyze
-        if len(segments) > 1:
-            merged_responses = "\n".join(all_responses)
-            final_response = analyze_merged_responses(
-                merged_responses, 
-                num_themes, 
-                system_message, 
-                provider,
-                model_name,
-                temperature,
-                max_tokens
-            )
-        else:
-            final_response = all_responses[0]
-        
-        return jsonify({
-            'success': True,
-            'response': final_response,
-            'segments_processed': len(segments)
-        })
-    
+            return jsonify({
+                'success': True,
+                'response': separate_results,
+                'report_type': 'separate'
+            })
+
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
