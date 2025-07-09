@@ -61,7 +61,7 @@ Please identify the top {num_themes} key themes from the interview and organize 
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST end with the participant code/ID in square brackets, for example: "This is what I think about the topic" [P001] (not parentheses or any other symbol).
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted as follows:
 Each column should be separated by a '|' symbol, and there should be no extra '|' symbols within the data. Each row should end with '---'.
@@ -76,7 +76,7 @@ Please identify the {num_themes} most common key themes from the interview and o
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST end with the participant code/ID in square brackets, for example: "This is what I think about the topic" [P001] (not parentheses or any other symbol).
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme. Please ensure this count reflects the actual number of participants who discussed each theme.
 The table should be formatted strictly as follows:
 The table should have 4 columns only.
@@ -95,7 +95,7 @@ Please identify the top {num_themes} key themes from the interview and organize 
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST end with the participant code/ID in square brackets, for example: "This is what I think about the topic" [P001] (not parentheses or any other symbol).
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted as follows:
 Each column should be separated by a '|' symbol, and there should be no extra '|' symbols within the data. Each row should end with '---'.
@@ -258,41 +258,25 @@ def analyze():
             )
 
         def _run_single_analysis(content, participant_id=None):
-            if custom_prompt:
-                prompt = custom_prompt
+            # If num_themes is 'auto', prompt the LLM to choose the optimal number
+            if num_themes == 'auto':
+                prompt = (
+                    "You need to analyze a dataset of interviews. "
+                    "Identify the optimal number of key themes (no more than 20) that comprehensively cover all significant ideas and perspectives in the data. "
+                    "Present a table of all major and minor themes, ensuring no important information is lost. "
+                    "Do not limit the number of themes unless the data naturally supports fewer themes. "
+                    "The table should include: | 'Theme' | 'Description' | 'Quotes' | 'Participant Count' |. "
+                    "IMPORTANT: Output ONLY the table with no additional text, commentary, or explanations. Start your response immediately with '**********' and end with '**********'. Do not use markdown formatting or code blocks. "
+                )
             else:
-                prompt = PROMPTS.get(data_type, PROMPTS['Interview']).format(num_themes=num_themes)
+                if custom_prompt:
+                    prompt = custom_prompt
+                else:
+                    prompt = PROMPTS.get(data_type, PROMPTS['Interview']).format(num_themes=num_themes)
 
             # Add participant code context if provided
             if participant_id:
                 content = add_participant_codes_to_content(content, participant_id)
-
-            detected_themes: list[str] | None = None
-            if pre_detect_themes:
-                detect_prompt = (
-                    f"Identify the {num_themes} most significant themes discussed in the dataset. "
-                    "Output ONLY the theme names, each on its own line, with NO numbering, bullets, or extra commentary."
-                )
-                try:
-                    themes_response = provider.chat(
-                        system_message,
-                        content + "\n\n" + detect_prompt,
-                        model=model_name or "auto",
-                        temperature=temperature,
-                        max_tokens=512,
-                    )
-                    raw_lines = themes_response.strip().splitlines()
-                    cleaned = [re.sub(r"^[\s\-–•*\d\.]+", "", ln).strip() for ln in raw_lines if ln.strip()]
-                    detected_themes = [t for t in cleaned if t]
-                except Exception as _e:
-                    detected_themes = None
-
-                if detected_themes:
-                    joined_themes = ", ".join([f'\"{t}\"' for t in detected_themes])
-                    prompt += (
-                        "\n\nONLY include the following themes in your table: " + joined_themes + ". "
-                        "If a theme has no supporting quotations, leave the 'Quotes' cell empty or omit that theme entirely."
-                    )
 
             segments = split_into_segments(content)
             all_responses = []
@@ -313,6 +297,20 @@ def analyze():
                     merged_responses, num_themes, system_message, provider, model_name, temperature, max_tokens
                 )
             else:
+                # Fallback: If auto mode and output is empty or malformed, retry with num_themes=10
+                if num_themes == 'auto':
+                    parsed = parse_response_to_csv(all_responses[0])
+                    if not parsed or len(parsed) < 2:
+                        fallback_prompt = PROMPTS.get(data_type, PROMPTS['Interview']).format(num_themes=10)
+                        fallback_message = segment + "\n\n" + fallback_prompt
+                        fallback_response = provider.chat(
+                            system_message,
+                            fallback_message,
+                            model=model_name or "auto",
+                            temperature=temperature,
+                            max_tokens=max_tokens,
+                        )
+                        return fallback_response
                 return all_responses[0]
 
         if analysis_mode == 'combined':
@@ -324,20 +322,36 @@ def analyze():
             combined_content = "\n\n".join(combined_content_parts)
             
             final_response = _run_single_analysis(combined_content)
+            # Check for empty or malformed output
+            parsed = parse_response_to_csv(final_response)
+            if not parsed or len(parsed) < 2:
+                return jsonify({'success': False, 'error': 'AI did not return a valid table. Try reducing the number of files, or use a fixed number of themes.'})
+            # If auto, count number of themes in the table
+            num_themes_auto = None
+            if num_themes == 'auto':
+                num_themes_auto = len(parsed) - 1
             return jsonify({
                 'success': True,
                 'response': final_response,
                 'report_type': 'combined',
-                'segments_processed': len(split_into_segments(combined_content))
+                'segments_processed': len(split_into_segments(combined_content)),
+                'num_themes_auto': num_themes_auto
             })
         else: # separate reports
             separate_results = []
             for file_data in files_data:
                 analysis_result = _run_single_analysis(file_data['data_content'], file_data['participant_id'])
+                parsed = parse_response_to_csv(analysis_result)
+                if not parsed or len(parsed) < 2:
+                    return jsonify({'success': False, 'error': f"AI did not return a valid table for file {file_data['filename']}. Try using a fixed number of themes or fewer files."})
+                num_themes_auto = None
+                if num_themes == 'auto':
+                    num_themes_auto = len(parsed) - 1
                 separate_results.append({
                     'filename': file_data['filename'],
                     'participant_id': file_data['participant_id'],
-                    'analysis': analysis_result
+                    'analysis': analysis_result,
+                    'num_themes_auto': num_themes_auto
                 })
             
             return jsonify({
@@ -390,7 +404,7 @@ Please identify the {num_themes} most common key themes from the interview and o
 The table should include the following columns:
 'Theme': Represents the main idea or topic identified from the interview.
 'Description': Provides a brief explanation or summary of the theme.
-'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
+'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST end with the participant code/ID in square brackets, for example: "This is what I think about the topic" [P001] (not parentheses or any other symbol).
 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted strictly as follows:
 - Start the table with '**********'.

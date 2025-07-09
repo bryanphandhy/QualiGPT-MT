@@ -1573,7 +1573,13 @@
             
             <div class="form-group">
                 <label for="numThemes">Number of Themes (1-20):</label>
-                <input type="number" id="numThemes" min="1" max="20" value="10">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <input type="number" id="numThemes" min="1" max="20" value="10">
+                    <label style="display: flex; align-items: center; gap: 5px;">
+                        <input type="checkbox" id="autoThemes" onchange="toggleAutoThemes()">
+                        Auto
+                    </label>
+                </div>
             </div>
             
             <div class="checkbox-group">
@@ -1746,6 +1752,7 @@
                 model: document.getElementById('modelSelect').value,
                 dataType: document.querySelector('input[name="dataType"]:checked').value,
                 numThemes: document.getElementById('numThemes').value,
+                autoThemes: document.getElementById('autoThemes').checked,
                 customPrompt: document.getElementById('customPrompt').value,
                 enableRolePlaying: document.getElementById('enableRolePlaying').checked,
                 englishOutput: document.getElementById('englishOutput').checked,
@@ -1792,6 +1799,10 @@
                     
                     updateThemeToggle();
                     updateTemperatureValue();
+                    if (data.autoThemes !== undefined) {
+                        document.getElementById('autoThemes').checked = data.autoThemes;
+                        document.getElementById('numThemes').disabled = data.autoThemes;
+                    }
                 } catch (e) {
                     console.error('Error loading session:', e);
                 }
@@ -2120,7 +2131,8 @@
             const provider = document.getElementById('providerSelect').value;
             const model = document.getElementById('modelSelect').value;
             const dataType = document.querySelector('input[name="dataType"]:checked').value;
-            const numThemes = document.getElementById('numThemes').value;
+            const autoThemes = document.getElementById('autoThemes').checked;
+            const numThemes = autoThemes ? 'auto' : document.getElementById('numThemes').value;
             const customPrompt = document.getElementById('customPrompt').value;
             const enableRolePlaying = document.getElementById('enableRolePlaying').checked;
             const temperature = parseFloat(document.getElementById('temperature').value);
@@ -2171,7 +2183,7 @@
                     if (data.report_type === 'separate') {
                         displaySeparateReports(data.response);
                     } else {
-                        parseAndDisplayResults(data.response);
+                        parseAndDisplayResults(data.response, data.num_themes_auto);
                     }
                     // Scroll after the content has been rendered
                     requestAnimationFrame(() => {
@@ -2188,6 +2200,7 @@
             }
         }
 
+        // Add Export All Reports button for Separate Analysis mode
         function displaySeparateReports(reports) {
             const resultsSection = document.getElementById('resultsSection');
             const mainTableView = document.getElementById('tableView');
@@ -2206,6 +2219,18 @@
 
             rawView.innerHTML = '';
             rawView.style.display = 'block';
+
+            // Add Export All Reports button
+            let exportAllBtn = document.getElementById('exportAllReportsBtn');
+            if (!exportAllBtn) {
+                exportAllBtn = document.createElement('button');
+                exportAllBtn.id = 'exportAllReportsBtn';
+                exportAllBtn.className = 'btn export-btn';
+                exportAllBtn.innerHTML = '<i class="fas fa-file-csv"></i> Export All Reports (CSV)';
+                exportAllBtn.style.marginBottom = '20px';
+                exportAllBtn.onclick = () => exportAllSeparateReports(reports);
+                rawView.parentNode.insertBefore(exportAllBtn, rawView);
+            }
 
             reports.forEach((report, index) => {
                 const baseId = `report-${index}`;
@@ -2228,6 +2253,40 @@
                     }
                 });
             });
+        }
+
+        // Export all separate reports as a single CSV
+        function exportAllSeparateReports(reports) {
+            let allRows = [];
+            const headers = ['Filename', 'Theme', 'Description', 'Quotes', 'Participant Count'];
+            reports.forEach(report => {
+                const tableData = parseResponseToTable(report.analysis);
+                if (tableData && tableData.length > 0) {
+                    tableData.forEach(row => {
+                        allRows.push([
+                            report.filename,
+                            row.theme,
+                            row.description,
+                            row.quotes,
+                            row.participantCount
+                        ]);
+                    });
+                }
+            });
+            let csvContent = headers.join(',') + '\n';
+            allRows.forEach(row => {
+                csvContent += row.map(val => '"' + String(val).replace(/"/g, '""') + '"').join(',') + '\n';
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `qualigpt_all_separate_reports_${new Date().toISOString().slice(0,10)}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            showAlert('All reports exported as CSV!', 'success');
         }
         
         function createReportCard(baseId, filename, tableData, rawAnalysisText, participantId = null) {
@@ -2312,7 +2371,7 @@
             reportContainer.querySelector('.export-print').addEventListener('click', () => printTable(tableData));
         }
 
-        function parseAndDisplayResults(responseText) {
+        function parseAndDisplayResults(responseText, numThemesAuto = null) {
             const parsedTableData = parseResponseToTable(responseText);
             const tableView = document.getElementById('tableView');
             const rawView = document.getElementById('rawView');
@@ -2320,6 +2379,7 @@
             const chartsSection = document.getElementById('chartsSection');
             const summarySection = document.getElementById('resultsSummary');
             const mainExportButtons = document.getElementById('mainExportButtons');
+            const autoThemes = document.getElementById('autoThemes').checked;
             
             // Ensure the correct sections are visible for a combined report
             tableView.style.display = 'block';
@@ -2333,17 +2393,20 @@
                 displayResultsTable(tableData, 'resultsTableBody', 'tableInfo');
                 updateSummaryCards(tableData, 'totalThemes', 'totalParticipants', 'totalQuotes');
                 createCharts(tableData, 'themeChart', 'participantChart');
-
                 viewToggle.innerHTML = '<i class="fas fa-file-alt"></i> Show Raw Text';
+                // Show AI-selected theme count if in auto mode
+                if (autoThemes && numThemesAuto !== null) {
+                    const summaryMsg = document.createElement('div');
+                    summaryMsg.className = 'alert alert-info';
+                    summaryMsg.style.margin = '16px 0';
+                    summaryMsg.innerHTML = `<i class='fas fa-magic'></i> <strong>AI selected ${numThemesAuto} themes</strong> to best cover your data.`;
+                    summarySection.insertAdjacentElement('afterend', summaryMsg);
+                }
             } else {
-                console.log('Failed to parse table data, showing raw response');
-                console.log('Raw response:', responseText);
                 rawView.textContent = responseText;
                 tableView.style.display = 'none';
                 rawView.style.display = 'block';
                 viewToggle.innerHTML = '<i class="fas fa-table"></i> Show Table';
-                
-                // Show a helpful message to the user
                 showAlert('Analysis completed but could not parse the structured table. Please check the raw text output below.', 'warning');
             }
         }
@@ -2674,7 +2737,8 @@
             const parsedData = [];
             let isFirstDataRow = true;
             
-            const participantCodeRegex = /\[([A-Za-z0-9_-]+)\]/g;
+            // Regex to match [CODE] or (CODE)
+            const participantCodeRegex = /[\[(]([A-Za-z0-9_-]+)[\])]/g;
             
             for (const line of tableContent) {
                 const trimmedLine = line.trim();
@@ -2783,6 +2847,12 @@
                 viewToggle.addEventListener('click', toggleView);
             }
         });
+
+        function toggleAutoThemes() {
+            const auto = document.getElementById('autoThemes').checked;
+            document.getElementById('numThemes').disabled = auto;
+            saveSession();
+        }
     </script>
 </body>
 </html>
