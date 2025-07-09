@@ -40,6 +40,22 @@ ALLOWED_EXTENSIONS = {'csv', 'xlsx', 'docx'}
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def extract_participant_id(filename):
+    """Extract participant ID from filename by removing file extension"""
+    # Remove file extension and use the base filename as participant ID
+    participant_id = filename.rsplit('.', 1)[0] if '.' in filename else filename
+    # Clean up the participant ID (remove any special characters that might cause issues)
+    participant_id = re.sub(r'[^\w\-_]', '', participant_id)
+    return participant_id if participant_id else 'Unknown'
+
+def add_participant_codes_to_content(content, participant_id):
+    """Add participant codes to content for better identification in quotes"""
+    lines = content.split('\n')
+    # Add participant ID context at the beginning
+    coded_content = f"[PARTICIPANT: {participant_id}]\n"
+    coded_content += '\n'.join(lines)
+    return coded_content
+
 # Prompt templates
 PROMPTS = {
     "Interview": """You need to analyze an dataset of interviews.
@@ -47,7 +63,7 @@ Please identify the top {num_themes} key themes from the interview and organize 
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted as follows:
 Each column should be separated by a '|' symbol, and there should be no extra '|' symbols within the data. Each row should end with '---'.
@@ -62,7 +78,7 @@ Please identify the {num_themes} most common key themes from the interview and o
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme. Please ensure this count reflects the actual number of participants who discussed each theme.
 The table should be formatted strictly as follows:
 The table should have 4 columns only.
@@ -81,7 +97,7 @@ Please identify the top {num_themes} key themes from the interview and organize 
 The table should includes these items:
 - 'Theme': Represents the main idea or topic identified from the interview.
 - 'Description': Provides a brief explanation or summary of the theme.
-- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
+- 'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
 - 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted as follows:
 Each column should be separated by a '|' symbol, and there should be no extra '|' symbols within the data. Each row should end with '---'.
@@ -178,8 +194,12 @@ def upload_file():
                 headers = list(data.columns)
                 data_content = '\n'.join(data.apply(lambda row: ' '.join(row.astype(str)), axis=1))
                 
+                # Extract participant ID from filename
+                participant_id = extract_participant_id(filename)
+                
                 processed_files.append({
                     'filename': filename,
+                    'participant_id': participant_id,
                     'headers': headers,
                     'data_content': data_content
                 })
@@ -239,11 +259,15 @@ def analyze():
                 "You are a helpful assistant. Follow the output format instructions exactly with no additional commentary." + language_instruction
             )
 
-        def _run_single_analysis(content):
+        def _run_single_analysis(content, participant_id=None):
             if custom_prompt:
                 prompt = custom_prompt
             else:
                 prompt = PROMPTS.get(data_type, PROMPTS['Interview']).format(num_themes=num_themes)
+
+            # Add participant code context if provided
+            if participant_id:
+                content = add_participant_codes_to_content(content, participant_id)
 
             detected_themes: list[str] | None = None
             if pre_detect_themes:
@@ -294,7 +318,13 @@ def analyze():
                 return all_responses[0]
 
         if analysis_mode == 'combined':
-            combined_content = "\n\n".join([f['data_content'] for f in files_data])
+            # For combined analysis, include participant IDs in the content
+            combined_content_parts = []
+            for f in files_data:
+                participant_content = add_participant_codes_to_content(f['data_content'], f['participant_id'])
+                combined_content_parts.append(participant_content)
+            combined_content = "\n\n".join(combined_content_parts)
+            
             final_response = _run_single_analysis(combined_content)
             return jsonify({
                 'success': True,
@@ -305,9 +335,10 @@ def analyze():
         else: # separate reports
             separate_results = []
             for file_data in files_data:
-                analysis_result = _run_single_analysis(file_data['data_content'])
+                analysis_result = _run_single_analysis(file_data['data_content'], file_data['participant_id'])
                 separate_results.append({
                     'filename': file_data['filename'],
+                    'participant_id': file_data['participant_id'],
                     'analysis': analysis_result
                 })
             
@@ -361,7 +392,7 @@ Please identify the {num_themes} most common key themes from the interview and o
 The table should include the following columns:
 'Theme': Represents the main idea or topic identified from the interview.
 'Description': Provides a brief explanation or summary of the theme.
-'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes).
+'Quotes': Contains the complete, verbatim quotations from participants that fully capture their opinions and support the identified theme (do NOT truncate these quotes). IMPORTANT: Each quote MUST include the participant code/ID in square brackets at the end, for example: "This is what I think about the topic" [P001]
 'Participant Count': Indicates the number of participants who mentioned or alluded to the theme.
 The table should be formatted strictly as follows:
 - Start the table with '**********'.

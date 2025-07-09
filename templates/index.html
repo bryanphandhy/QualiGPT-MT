@@ -1515,15 +1515,28 @@
             <div id="connectionStatus" style="margin-top: 10px;"></div>
         </div>
         
-        <!-- Step 2: Data Upload -->
+        <!-- Step 2: File Upload -->
         <div class="section">
-            <h2><span class="step-number">2</span> Data Upload</h2>
-            <div class="upload-area" onclick="document.getElementById('fileInput').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <h2><span class="step-number">2</span> Upload Data Files</h2>
+            
+            <!-- Information about participant codes -->
+            <div class="alert" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); margin-bottom: 20px;">
+                <i class="fas fa-info-circle" style="margin-right: 8px;"></i>
+                <strong>Participant Codes:</strong> Filenames will be used as participant IDs in quotes (e.g., "P001.docx" → quotes will show [P001]). This helps with academic citation and proper attribution.
+            </div>
+            
+            <div class="upload-area" 
+                 ondrop="handleDrop(event)" 
+                 ondragover="handleDragOver(event)" 
+                 ondragleave="handleDragLeave(event)"
+                 onclick="document.getElementById('fileInput').click()">
                 <div class="upload-icon">📁</div>
-                <p style="margin-top: 10px; color: var(--accent-color); font-weight: 500;">Click to upload or drag and drop</p>
-                <p style="color: var(--text-secondary); font-size: 14px;">Supports CSV, XLSX, DOCX (max 16MB)</p>
+                <p style="margin-top: 10px; color: var(--accent-color); font-weight: 500;">Click to upload or drag and drop files</p>
+                <p style="color: var(--text-secondary); font-size: 14px;">Supports multiple files: CSV, XLSX, DOCX</p>
+                <p style="color: var(--text-secondary); font-size: 12px; margin-top: 5px;">Max 16MB per file</p>
             </div>
             <input type="file" id="fileInput" accept=".csv,.xlsx,.docx" style="display: none;" onchange="handleFileSelect(event)" multiple>
+            
             <div id="filePreview" style="display: none;"></div>
         </div>
 
@@ -2008,11 +2021,13 @@
 
             files.forEach(file => {
                 totalSize += file.data_content.length;
+                const participantId = file.participant_id || 'Unknown';
                 fileSummariesHTML += `
                     <div class="file-info">
                         <div class="file-icon">📄</div>
                         <div class="file-details">
                             <h4>${file.filename}</h4>
+                            <p><strong>Participant ID:</strong> ${participantId}</p>
                             <p>${file.data_content.length.toLocaleString()} characters</p>
                         </div>
                     </div>
@@ -2026,6 +2041,7 @@
                         <div class="file-details">
                             <h4>${files.length} Files Uploaded</h4>
                             <p>Total size: ${totalSize.toLocaleString()} characters</p>
+                            <p><em>Participant codes will be included in quotes</em></p>
                         </div>
                         <button class="btn-secondary" onclick="clearUpload()" style="padding: 8px 12px; font-size: 14px;">🗑️ Clear All</button>
                     </div>
@@ -2194,7 +2210,8 @@
             reports.forEach((report, index) => {
                 const baseId = `report-${index}`;
                 const tableData = parseResponseToTable(report.analysis);
-                const reportCard = createReportCard(baseId, report.filename, tableData, report.analysis);
+                const participantId = report.participant_id || null;
+                const reportCard = createReportCard(baseId, report.filename, tableData, report.analysis, participantId);
                 rawView.appendChild(reportCard);
 
                 // Defer the execution to ensure the DOM is updated
@@ -2213,15 +2230,17 @@
             });
         }
         
-        function createReportCard(baseId, filename, tableData, rawAnalysisText) {
+        function createReportCard(baseId, filename, tableData, rawAnalysisText, participantId = null) {
             const reportContainer = document.createElement('div');
             reportContainer.className = 'section separate-report-container';
             reportContainer.id = baseId;
 
+            const participantInfo = participantId ? ` (Participant: ${participantId})` : '';
+
             if (tableData && tableData.length > 0) {
                 reportContainer.innerHTML = `
                     <div class="results-header" style="padding-bottom: 20px;">
-                        <h3><i class="fas fa-file-alt"></i> Report for: ${escapeHtml(filename)}</h3>
+                        <h3><i class="fas fa-file-alt"></i> Report for: ${escapeHtml(filename)}${participantInfo}</h3>
                     </div>
                     <div class="results-summary" id="${baseId}-summary">
                         <div class="summary-card"><i class="fas fa-tags"></i><div><span class="summary-number" id="${baseId}-totalThemes">0</span><span class="summary-label">Themes</span></div></div>
@@ -2256,7 +2275,7 @@
                     </div>`;
             } else {
                 reportContainer.innerHTML = `
-                    <div class="results-header"><h3><i class="fas fa-file-alt"></i> Report for: ${escapeHtml(filename)}</h3></div>
+                    <div class="results-header"><h3><i class="fas fa-file-alt"></i> Report for: ${escapeHtml(filename)}${participantInfo}</h3></div>
                     <div class="raw-view" style="display: block; white-space: pre-wrap; padding: 15px; margin-top: 10px; border-radius: 8px;">${escapeHtml(rawAnalysisText || '(No content to display)')}</div>`;
             }
             return reportContainer;
